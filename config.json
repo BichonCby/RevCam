@@ -1,0 +1,33 @@
+{
+    "camera": {
+        "brightness": 0.21,
+        "contrast": 0.62,
+        "saturation": 1.0,
+        "sharpness": 1.0,
+        "exposure_speed": 30000,
+        "iso": 259
+    },
+    "motion": {
+        "threshold": 47,
+        "min_area": 500,
+        "blur_size": 21,
+        "record_duration": 5
+    },
+    "display": {
+        "brightness_tm1637": 1,
+        "auto_off_hours": [
+            23,
+            6
+        ]
+    },
+    "audio": {
+        "volume": 0.05,
+        "play_on_motion": false,
+        "motion_sound": "alert.mp3"
+    },
+    "alarm": {
+        "hour": 7,
+        "minute": 0,
+        "enabled": false
+    }
+}

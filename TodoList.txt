@@ -1,0 +1,13 @@
+TODO liste RevCam
+- comprendre et regler les parametres de la camera. Voir s'il y a un mode auto
+- revoir l'algorithme d'enregistrement
+- Afficher sur l'IHM les frames en mode utiles (raw,bw,motion)
+
+- Ajouter led et btn
+- Ajouter des voyants sur l'IHM correspondant aux LED
+- Ajouter des boutons sur l'IHM correspondant aux BTN
+faire une correspondance entre les LED et l'interface, les boutons et l'interface
+- Faire une liste des messages afficheur
+	- heure avec ou sans colonne
+	- AL
+	- AUd
