@@ -6,6 +6,9 @@ import numpy as np
 from picamera2 import Picamera2
 from picamera2.encoders import H264Encoder
 from picamera2.outputs import FileOutput
+from libcamera import controls
+from picamera2.outputs import FfmpegOutput
+
 import cv2
 from datetime import datetime
 import os
@@ -37,6 +40,7 @@ class CameraManager:
         self.current_frame_raw = None
         self.current_frame_bw = None
         self.current_frame_motion = None
+        self.current_frame_detection = None
         
         self.init_camera()
     
@@ -53,14 +57,18 @@ class CameraManager:
             self.camera = Picamera2()
             
             camera_config = self.camera.create_video_configuration(
-                #main={"format": "RGB888", "size": (800,600)},
+                main={"format": "RGB888", "size": (800,600)},
                 controls={
-                    "Brightness": config.get("camera", "brightness"),
-                    "Contrast": config.get("camera", "contrast"),
-                    "Saturation": config.get("camera", "saturation"),
-                    "Sharpness": config.get("camera", "sharpness"),
-                    "ExposureTime": config.get("camera", "exposure_speed"),
-                    "AnalogueGain": config.get("camera", "iso") / 100
+                    "AeEnable": True,
+                    "AwbEnable": True,
+                    "AeExposureMode": controls.AeExposureModeEnum.Normal,  # Changera selon lumière
+                    "AeMeteringMode": controls.AeMeteringModeEnum.Matrix   # Mesure globale
+                    # "Brightness": config.get("camera", "brightness"),
+                    # "Contrast": config.get("camera", "contrast"),
+                    # "Saturation": config.get("camera", "saturation"),
+                    # "Sharpness": config.get("camera", "sharpness"),
+                    # "ExposureTime": config.get("camera", "exposure_speed"),
+                    # "AnalogueGain": config.get("camera", "iso") / 100
                 }
             )
             self.camera.configure(camera_config)
@@ -91,14 +99,18 @@ class CameraManager:
             # Recréer la caméra
             self.camera = Picamera2()
             camera_config = self.camera.create_video_configuration(
-                #main={"format": "RGB888", "size": (800,600)},
+                main={"format": "RGB888", "size": (800,600)},
                 controls={
-                    "Brightness": config.get("camera", "brightness"),
-                    "Contrast": config.get("camera", "contrast"),
-                    "Saturation": config.get("camera", "saturation"),
-                    "Sharpness": config.get("camera", "sharpness"),
-                    "ExposureTime": config.get("camera", "exposure_speed"),
-                    "AnalogueGain": config.get("camera", "iso") / 100
+                    "AeEnable": True,
+                    "AwbEnable": True,
+                    "AeExposureMode": controls.AeExposureModeEnum.Normal,  # Changera selon lumière
+                    "AeMeteringMode": controls.AeMeteringModeEnum.Matrix   # Mesure globale
+                    # "Brightness": config.get("camera", "brightness"),
+                    # "Contrast": config.get("camera", "contrast"),
+                    # "Saturation": config.get("camera", "saturation"),
+                    # "Sharpness": config.get("camera", "sharpness"),
+                    # "ExposureTime": config.get("camera", "exposure_speed"),
+                    # "AnalogueGain": config.get("camera", "iso") / 100
                 }
             )
             self.camera.configure(camera_config)
@@ -110,6 +122,7 @@ class CameraManager:
     
     def update_camera_params(self):
         """Met à jour les paramètres de la caméra"""
+        return # on supprime cette fonctionnalite pour passer en automatique
         if self.camera:
             try:
                 self.camera.set_controls({
@@ -132,10 +145,14 @@ class CameraManager:
             self.previous_frame = gray
             return False, None
         
+        # on fait la difference entre deux images grises successives
         diff = cv2.absdiff(self.previous_frame, gray)
-        _, thresh = cv2.threshold(diff, self.motion_threshold, 255, cv2.THRESH_BINARY)
-        thresh = cv2.dilate(thresh, None, iterations=2)
         
+        #tout ce qui a bouge sera blanc, le reste noir
+        _, thresh = cv2.threshold(diff, self.motion_threshold, 255, cv2.THRESH_BINARY)
+        # on dilate les points blancs pour avoir une meilleure homogeneite. None c'est comme un 3x3
+        thresh = cv2.dilate(thresh, None, iterations=2)
+        self.current_frame_detection = thresh.copy()
         contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         
         motion_detected = False
@@ -177,14 +194,16 @@ class CameraManager:
         
         try:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            self.recording_filepath = f"recordings/motion_{timestamp}.h264"
+            filename = f"recordings/motion_{timestamp}.mp4"
+            #self.recording_filepath = f"recordings/motion_{timestamp}.h264"
             os.makedirs("recordings", exist_ok=True)
             
             print(f"🎬 DÉMARRAGE ENREGISTREMENT: {self.recording_filepath}")
             
             with self.camera_lock:
-                self.current_recording = open(self.recording_filepath, 'wb')
-                output = FileOutput(self.current_recording)
+                output = FfmpegOutput(filename, audio=False)
+                #self.current_recording = open(self.recording_filepath, 'wb')
+                #output = FileOutput(self.current_recording)
                 self.camera.start_recording(self.encoder, output)
                 self.recording = True
             
@@ -267,6 +286,7 @@ class CameraManager:
             elif stop_needed:
                 self.stop_recording()
             
+            #self.current_frame_detection = mask.copy()
             # Création du flux motion
             self.current_frame_motion = frame.copy()
             
@@ -314,7 +334,7 @@ class CameraManager:
         while self.running:
             try:
                 self.capture_frame()
-                time.sleep(0.033)
+                time.sleep(0.1)#0.033 pour 30 frames/s
             except Exception as e:
                 print(f"Erreur dans run: {e}")
                 time.sleep(0.5)

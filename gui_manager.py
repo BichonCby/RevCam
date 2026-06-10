@@ -203,7 +203,7 @@ class VideoThread(QThread):
     def __init__(self, camera_manager):
         super().__init__()
         self.camera_manager = camera_manager
-        self.mode = "raw"
+        self.mode = "nopic"
         self.running = True
     
     def set_mode(self, mode):
@@ -222,7 +222,13 @@ class VideoThread(QThread):
                             cv2.COLOR_GRAY2RGB
                         )
                 elif self.mode == "motion":
-                    frame = self.camera_manager.current_frame_motion
+                    frame = cv2.cvtColor(
+                        self.camera_manager.current_frame_detection,
+                        cv2.COLOR_GRAY2RGB
+                        )
+                elif self.mode == "nopic":
+                    frame = np.zeros((800,600,3),dtype=np.uint8)
+                    #frame = self.camera_manager.current_frame_motion
                 
                 if frame is not None:
                     self.change_pixmap_signal.emit(frame, self.mode)
@@ -264,6 +270,10 @@ class GUIManager(QMainWindow):
         self.tm1637_timer.timeout.connect(self.update_tm1637_display)
         self.tm1637_timer.start(500)  # Mise à jour 2x par seconde    
         
+        # etat des Led
+        self.led1 = False
+        self.led2 = False
+        
     def init_ui(self):
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -285,15 +295,19 @@ class GUIManager(QMainWindow):
         mode_layout = QHBoxLayout()
         self.btn_raw = QPushButton("RAW")
         self.btn_bw = QPushButton("Noir & Blanc")
-        self.btn_motion = QPushButton("Détection Mouvement")
+        self.btn_motion = QPushButton("Détection")
+        self.btn_nopic = QPushButton("Black screen")
+        self.btn_nopic.setStyleSheet("font-weight: bold;")
         
         self.btn_raw.clicked.connect(lambda: self.set_video_mode("raw"))
         self.btn_bw.clicked.connect(lambda: self.set_video_mode("bw"))
         self.btn_motion.clicked.connect(lambda: self.set_video_mode("motion"))
+        self.btn_nopic.clicked.connect(lambda: self.set_video_mode("nopic"))
         
         mode_layout.addWidget(self.btn_raw)
         mode_layout.addWidget(self.btn_bw)
         mode_layout.addWidget(self.btn_motion)
+        mode_layout.addWidget(self.btn_nopic)
         left_layout.addLayout(mode_layout)
         
         # NOUVEAU : Widget d'affichage TM1637 simulé
@@ -419,7 +433,17 @@ class GUIManager(QMainWindow):
         self.greenled_label = QLabel()
         self.redled_label = QLabel()
         self.greenled_label.setFixedSize(20, 20)
+        self.greenled_label.setStyleSheet("""
+                background-color: #000000;
+                border-radius: 10px;
+                border: 2px solid #00AA00;
+            """)
         self.redled_label.setFixedSize(20, 20)
+        self.redled_label.setStyleSheet("""
+                background-color: #000000;
+                border-radius: 10px;
+                border: 2px solid #00AA00;
+            """)
         btnled_layout.addWidget(self.btn_plus)
         btnled_layout.addWidget(self.btn_moins)
         btnled_layout.addWidget(self.btn_snooze)
@@ -437,7 +461,7 @@ class GUIManager(QMainWindow):
         
         layout.addWidget(left_panel, 1)
         layout.addWidget(right_panel, 1)
-    
+           
     def update_tm1637_display(self):
         """Met à jour l'affichage simulé depuis le vrai TM1637"""
         try:
@@ -482,11 +506,28 @@ class GUIManager(QMainWindow):
     
     def set_video_mode(self, mode):
         self.video_thread.set_mode(mode)
+        self.btn_raw.setStyleSheet("font-weight: normal;")
+        self.btn_bw.setStyleSheet("font-weight: normal;")
+        self.btn_motion.setStyleSheet("font-weight: normal;")
+        self.btn_nopic.setStyleSheet("font-weight: normal;")
+        
+        if mode == "raw":
+            self.btn_raw.setStyleSheet("font-weight: bold;")
+        elif mode == "bw":
+            self.btn_bw.setStyleSheet("font-weight: bold;")
+        elif mode == "motion":
+            self.btn_motion.setStyleSheet("font-weight: bold;")
+        elif mode == "nopic":
+            self.btn_nopic.setStyleSheet("font-weight: bold;")
     
     def update_image(self, frame, mode):
         """Met à jour l'affichage vidéo"""
         try:
-            h, w, ch = frame.shape
+            if len(frame.shape)==3:
+                h, w, ch = frame.shape
+            else:
+                h, w = frame.shape
+                ch = 1
             bytes_per_line = ch * w
             qt_image = QImage(frame.data, w, h, bytes_per_line, QImage.Format_RGB888)
             pixmap = QPixmap.fromImage(qt_image)
@@ -549,48 +590,48 @@ class GUIManager(QMainWindow):
         self.audio_manager.stop_music()
     
     def button_plus(self):
-        #self.greenled_label.setText("BOUTON_PLUS")
         self.gpio_controller.push_button(self.BOUTON_PLUS)
         print("bouton plus")
  
     def button_moins(self):
-        #self.greenled_label.setText("BOUTON_MOINS")
         self.gpio_controller.push_button(self.BOUTON_MOINS)
         print("bouton moins")
 
     def button_snooze(self):
-        #self.greenled_label.setText("BOUTON_SNOOZE")
         self.gpio_controller.push_button(self.BOUTON_SNOOZE)
         print("bouton snooze")
 
     def button_mode(self):
-        #self.greenled_label.setText("MODE")
         self.gpio_controller.push_button(self.BOUTON_MODE)
         print("bouton mode")
     
     def set_led(self,led1,led2):
         #print(f"led callback appele {led1} {led2}")
-        if led1:
+        if led1 and not self.led1:
             #self.greenled_label.setText("🟢green")
+            self.led1 = True
             self.greenled_label.setStyleSheet("""
                 background-color: #00FF00;
                 border-radius: 10px;
                 border: 2px solid #00AA00;
             """)
-        else:
+        elif not led1 and self.led1:
+            self.led1 = False
             self.greenled_label.setStyleSheet("""
                 background-color: #000000;
                 border-radius: 10px;
                 border: 2px solid #00AA00;
             """)
-        if led2:
-             self.redled_label.setStyleSheet("""
+        if led2 and not self.led2:
+            self.led2 = True
+            self.redled_label.setStyleSheet("""
                 background-color: #FF0000;
                 border-radius: 10px;
                 border: 2px solid #00AA00;
             """)
-        else:
-             self.redled_label.setStyleSheet("""
+        elif not led2 and self.led2:
+            self.led2 = False
+            self.redled_label.setStyleSheet("""
                 background-color: #000000;
                 border-radius: 10px;
                 border: 2px solid #00AA00;

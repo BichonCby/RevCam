@@ -10,15 +10,14 @@ class GPIOController:
     """Gestion des boutons physiques et LEDs"""
     
     # Pins des boutons (à ajuster selon votre câblage)
-    PIN_BTN_VOLUME_UP = 17
-    PIN_BTN_VOLUME_DOWN = 27
-    PIN_BTN_ALARM_SET = 22
-    PIN_BTN_MODE = 23
+    PIN_BTN_VOLUME_UP = 7
+    PIN_BTN_VOLUME_DOWN = 1
+    PIN_BTN_ALARM_SET = 8
+    PIN_BTN_MODE = 25
     
     # Pins des LEDs
-    PIN_LED_MUSIC = 24
-    PIN_LED_CAMERA = 25
-    PIN_LED_PROBLEM = 5
+    PIN_LED_MUSIC = 16
+    PIN_LED_PROBLEM = 20
     
     # Modes d'affichage pour le bouton MODE
     MODE_NORMAL = 0
@@ -70,7 +69,6 @@ class GPIOController:
         
         # Configuration des LEDs (sorties)
         GPIO.setup(self.PIN_LED_MUSIC, GPIO.OUT, initial=GPIO.LOW)
-        GPIO.setup(self.PIN_LED_CAMERA, GPIO.OUT, initial=GPIO.HIGH)  # ON par défaut
         GPIO.setup(self.PIN_LED_PROBLEM, GPIO.OUT, initial=GPIO.LOW)
         
         # États initiaux des LEDs
@@ -100,7 +98,6 @@ class GPIOController:
     def set_led_camera(self, state):
         """Allume/éteint la LED caméra"""
         self.led_camera_state = state
-        GPIO.output(self.PIN_LED_CAMERA, GPIO.HIGH if state else GPIO.LOW)
     
     def set_led_problem(self, state, auto_clear=True):
         """Allume/éteint la LED problème"""
@@ -367,4 +364,4 @@ class GPIOController:
         self.running = False
         GPIO.cleanup([self.PIN_BTN_VOLUME_UP, self.PIN_BTN_VOLUME_DOWN,
                       self.PIN_BTN_ALARM_SET, self.PIN_BTN_MODE,
-                      self.PIN_LED_MUSIC, self.PIN_LED_CAMERA, self.PIN_LED_PROBLEM])
+                      self.PIN_LED_MUSIC, self.PIN_LED_PROBLEM])

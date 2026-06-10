@@ -38,20 +38,16 @@ class SurveillanceSystem:
                 self.gui.motion_status.setText("🔴🔴 MOUVEMENT DÉTECTÉ 🔴🔴")
                 self.gui.motion_status.setStyleSheet("color: red; font-weight: bold;")
             # Clignotement LED caméra pendant l'enregistrement
-            if self.gpio_controller:
-                self.gpio_controller._blink_led(self.gpio_controller.PIN_LED_CAMERA, 0.5)
+            #if self.gpio_controller:
+            #    self.gpio_controller._blink_led(self.gpio_controller.PIN_LED_CAMERA, 0.5)
 
         else:
-            print("recording status false")
             if self.gui:
-                print("recording status false 2")
                 self.gui.motion_status.setText("🟢 Aucun mouvement")
-                print("recording status false 3")
                 self.gui.motion_status.setStyleSheet("color: green;")
-                print("recording status false 4")
             # Rallumer LED caméra fixe
-            if self.gpio_controller:
-                self.gpio_controller.set_led_camera(True)
+            #if self.gpio_controller:
+            #    self.gpio_controller.set_led_camera(True)
     def on_led_status(self,led1,led2):
         #
         if self.gui:

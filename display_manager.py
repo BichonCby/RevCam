@@ -5,7 +5,7 @@ from datetime import datetime
 import tm1637
 
 class DisplayManager:
-    def __init__(self, clk_pin=18, dio_pin=16):
+    def __init__(self, clk_pin=23, dio_pin=24):
         # GPIO 18 pour CLK, GPIO 16 pour DIO
         self.display = tm1637.TM1637("/dev/gpiochip0", clk=clk_pin, dio=dio_pin)
         self.brightness_val = 5
