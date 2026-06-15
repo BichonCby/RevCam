@@ -484,8 +484,10 @@ class GUIManager(QMainWindow):
         status_layout = QVBoxLayout()
         self.record_status = QLabel("Pas d enregistrement")
         self.motion_status = QLabel("🟢 Aucun mouvement")
+        self.motion_counter = QLabel("Compteur 0")
         status_layout.addWidget(self.motion_status)
         status_layout.addWidget(self.record_status)
+        status_layout.addWidget(self.motion_counter)
         status_group.setLayout(status_layout)
         right_layout.addWidget(status_group)
         

@@ -15,7 +15,7 @@ import os
 from config import config
 
 class CameraManager:
-    def __init__(self, recording_callback=None, motion_callback=None):
+    def __init__(self, recording_callback=None, motion_callback=None, counter_callback=None):
         self.camera = None
         self.running = False
         self.recording = False
@@ -40,6 +40,7 @@ class CameraManager:
         self.previous_frame = None
         self.recording_callback = recording_callback
         self.motion_callback = motion_callback
+        self.counter_callback = counter_callback
         
         self.current_frame_raw = None
         self.current_frame_bw = None
@@ -223,7 +224,9 @@ class CameraManager:
             
             if self.recording and self.motion_counter <= self.stop_threshold:
                 stop_needed = True
-        
+        if self.counter_callback:
+            self.counter_callback(self.motion_counter)
+       
         return start_needed, stop_needed
     
     def start_recording(self):
@@ -272,12 +275,12 @@ class CameraManager:
                     # self.current_recording = None
             
             # Vérifier la taille du fichier
-            if self.self.recording_filename and os.path.exists(self.recording_filename):
+            if self.recording_filename and os.path.exists(self.recording_filename):
                 file_size = os.path.getsize(self.recording_filename)
-                if file_size > 0:
+                if file_size > 1000000:
                     print(f"✅ Enregistrement sauvegardé: {self.recording_filename} ({file_size} bytes)")
                 else:
-                    print(f"⚠ Fichier vide supprimé: {self.recording_filename}")
+                    print(f"⚠ Fichier vide supprimé (taille {file_size}): {self.recording_filename}")
                     os.remove(self.recording_filename)
             
             self.recording_filename = None
