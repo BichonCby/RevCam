@@ -199,6 +199,7 @@ class TM1637DisplayWidget(QWidget):
 
 class VideoThread(QThread):
     change_pixmap_signal = pyqtSignal(np.ndarray, str)
+    change_luminosity_signal = pyqtSignal(int)
     
     def __init__(self, camera_manager):
         super().__init__()
@@ -211,6 +212,7 @@ class VideoThread(QThread):
     
     def run(self):
         while self.running:
+            
             frame = None
             try:
                 if self.mode == "raw":
@@ -232,10 +234,11 @@ class VideoThread(QThread):
                 
                 if frame is not None:
                     self.change_pixmap_signal.emit(frame, self.mode)
+                    self.change_luminosity_signal.emit(self.camera_manager.luminosity)
             except Exception as e:
                 print(f"Erreur dans VideoThread: {e}")
             
-            self.msleep(33)
+            self.msleep(100)
     
     def stop(self):
         self.running = False
@@ -263,6 +266,7 @@ class GUIManager(QMainWindow):
         
         self.video_thread = VideoThread(camera_manager)
         self.video_thread.change_pixmap_signal.connect(self.update_image)
+        self.video_thread.change_luminosity_signal.connect(self.update_luminosity)
         self.video_thread.start()
 
         # Timer pour synchroniser l'affichage TM1637 simulé
@@ -310,6 +314,17 @@ class GUIManager(QMainWindow):
         mode_layout.addWidget(self.btn_nopic)
         left_layout.addLayout(mode_layout)
         
+        # affichage de la luminosite camera
+        
+        lumin_layout =QHBoxLayout()
+        self.lumin_label = QLabel("Lumonosite camera :")
+        self.lumin_value = QLabel("50")
+        self.lumin_visu = QLabel("█")
+        lumin_layout.addWidget(self.lumin_label)
+        lumin_layout.addWidget(self.lumin_value)
+        lumin_layout.addWidget(self.lumin_visu)
+        left_layout.addLayout(lumin_layout)
+        
         # NOUVEAU : Widget d'affichage TM1637 simulé
         tm1637_container = QGroupBox("État de l'afficheur TM1637")
         tm1637_container.setStyleSheet("QGroupBox { font-weight: bold; }")
@@ -339,18 +354,25 @@ class GUIManager(QMainWindow):
         camera_group = QGroupBox("Paramètres Caméra")
         camera_layout = QFormLayout()
         
-        self.brightness_slider = self.create_slider(0.0, 1.0, config.get("camera", "brightness"))
-        self.brightness_slider.valueChanged.connect(self.update_brightness)
-        camera_layout.addRow("Luminosité:", self.brightness_slider)
+        # self.brightness_slider = self.create_slider(0.0, 1.0, config.get("camera", "brightness"))
+        # self.brightness_slider.valueChanged.connect(self.update_brightness)
+        # camera_layout.addRow("Luminosité:", self.brightness_slider)
         
-        self.contrast_slider = self.create_slider(0.0, 2.0, config.get("camera", "contrast"))
-        self.contrast_slider.valueChanged.connect(self.update_contrast)
-        camera_layout.addRow("Contraste:", self.contrast_slider)
+        # self.contrast_slider = self.create_slider(0.0, 2.0, config.get("camera", "contrast"))
+        # self.contrast_slider.valueChanged.connect(self.update_contrast)
+        # camera_layout.addRow("Contraste:", self.contrast_slider)
         
-        self.iso_slider = self.create_slider(100, 800, config.get("camera", "iso"))
-        self.iso_slider.valueChanged.connect(self.update_iso)
-        camera_layout.addRow("ISO:", self.iso_slider)
+        # self.iso_slider = self.create_slider(100, 800, config.get("camera", "iso"))
+        # self.iso_slider.valueChanged.connect(self.update_iso)
+        # camera_layout.addRow("ISO:", self.iso_slider)
         
+        self.resolution_slider = self.create_slider(0, 4, config.get("camera", "resolution"))
+        self.resolution_slider.valueChanged.connect(self.update_resolution)
+        camera_layout.addRow("Résolution:", self.resolution_slider)
+        self.resolution_status = QLabel(self.get_resolution_label(config.get("camera", "resolution")))
+        camera_layout.addRow("Résolution:", self.resolution_status)
+        
+#        camera_group.addWidget(self.resolution_status)        
         camera_group.setLayout(camera_layout)
         right_layout.addWidget(camera_group)
         
@@ -358,18 +380,62 @@ class GUIManager(QMainWindow):
         motion_group = QGroupBox("Détection Mouvement")
         motion_layout = QFormLayout()
         
-        self.threshold_slider = self.create_slider(10, 100, config.get("motion", "threshold"))
-        self.threshold_slider.valueChanged.connect(self.update_threshold)
-        motion_layout.addRow("Sensibilité:", self.threshold_slider)
+        # self.threshold_slider = self.create_slider(10, 100, config.get("motion", "threshold"))
+        # self.threshold_slider.valueChanged.connect(self.update_threshold)
+        # motion_layout.addRow("Sensibilité:", self.threshold_slider)
+ 
+        self.threshold_spin = QSpinBox()
+        self.threshold_spin.setRange(1, 100)
+        self.threshold_spin.setValue(config.get("motion", "threshold"))
+        self.threshold_spin.setFixedSize(100,30)
+        self.threshold_spin.valueChanged.connect(self.update_threshold)
+        motion_layout.addRow("Sensibilité:", self.threshold_spin)
+ 
+        self.area_spin = QSpinBox()
+        self.area_spin.setRange(1, 100)
+        self.area_spin.setValue(config.get("motion", "min_area"))
+        self.area_spin.setFixedSize(100,30)
+        self.area_spin.valueChanged.connect(self.update_area)
+        motion_layout.addRow("Nb points detection:", self.area_spin)
         
-        self.duration_spin = QSpinBox()
-        self.duration_spin.setRange(1, 30)
-        self.duration_spin.setValue(config.get("motion", "record_duration"))
-        self.duration_spin.valueChanged.connect(self.update_duration)
-        motion_layout.addRow("Durée enregistrement (s):", self.duration_spin)
+        self.blur_spin = QSpinBox()
+        self.blur_spin.setRange(1, 100)
+        self.blur_spin.setSingleStep(2)
+        self.blur_spin.setValue(config.get("motion", "blur_size"))
+        self.blur_spin.setFixedSize(100,30)
+        self.blur_spin.valueChanged.connect(self.update_blur)
+        motion_layout.addRow("Taille de flou:", self.blur_spin)
         
         motion_group.setLayout(motion_layout)
         right_layout.addWidget(motion_group)
+
+        # Section Enregistrement
+        record_group = QGroupBox("Enregistrement")
+        record_layout = QFormLayout()
+        
+        self.start_threshold_spin = QSpinBox()
+        self.start_threshold_spin.setRange(1, 100)
+        self.start_threshold_spin.setValue(config.get("record", "start_threshold"))
+        self.start_threshold_spin.setFixedSize(100,30)
+        self.start_threshold_spin.valueChanged.connect(self.update_start_threshold)
+        record_layout.addRow("Seuil rec (0.1s):", self.start_threshold_spin)
+ 
+        self.stop_threshold_spin = QSpinBox()
+        self.stop_threshold_spin.setRange(1, 100)
+        self.stop_threshold_spin.setValue(config.get("record", "stop_threshold"))
+        self.stop_threshold_spin.setFixedSize(100,30)
+        self.stop_threshold_spin.valueChanged.connect(self.update_stop_threshold)
+        record_layout.addRow("seuil stop rec:", self.stop_threshold_spin)
+        
+        self.max_counter_spin = QSpinBox()
+        self.max_counter_spin.setRange(1, 100)
+        self.max_counter_spin.setValue(config.get("record", "max_counter"))
+        self.max_counter_spin.setFixedSize(100,30)
+        self.max_counter_spin.valueChanged.connect(self.update_max_counter)
+        record_layout.addRow("Max compteur:", self.max_counter_spin)
+        
+        record_group.setLayout(record_layout)
+        right_layout.addWidget(record_group)
         
         # Section Audio
         audio_group = QGroupBox("Audio")
@@ -400,7 +466,7 @@ class GUIManager(QMainWindow):
         
         # Boutons musique
         music_group = QGroupBox("Musique")
-        music_layout = QVBoxLayout()
+        music_layout = QHBoxLayout()
         
         self.btn_play = QPushButton("▶ Jouer")
         self.btn_stop = QPushButton("⏹ Arrêter")
@@ -416,16 +482,16 @@ class GUIManager(QMainWindow):
         # Statut
         status_group = QGroupBox("Statut")
         status_layout = QVBoxLayout()
-        self.status_label = QLabel("✅ Système actif")
+        self.record_status = QLabel("Pas d enregistrement")
         self.motion_status = QLabel("🟢 Aucun mouvement")
-        status_layout.addWidget(self.status_label)
         status_layout.addWidget(self.motion_status)
+        status_layout.addWidget(self.record_status)
         status_group.setLayout(status_layout)
         right_layout.addWidget(status_group)
         
         # Boutons et LED
         btnled_group = QGroupBox("LED et boutons")
-        btnled_layout = QVBoxLayout()
+        btnled_layout = QHBoxLayout()
         self.btn_plus = QPushButton("PLUS")
         self.btn_moins = QPushButton("MOINS")
         self.btn_snooze = QPushButton("snooze")
@@ -540,30 +606,58 @@ class GUIManager(QMainWindow):
             QApplication.processEvents()
         except Exception as e:
             print(f"Erreur affichage: {e}")
-    
-    def update_brightness(self):
-        value = self.get_slider_value(self.brightness_slider)
-        config.set("camera", "brightness", value)
-        self.camera_manager.update_camera_params()
-    
-    def update_contrast(self):
-        value = self.get_slider_value(self.contrast_slider)
-        config.set("camera", "contrast", value)
-        self.camera_manager.update_camera_params()
-    
-    def update_iso(self):
-        value = int(self.get_slider_value(self.iso_slider))
-        config.set("camera", "iso", value)
+            
+    def update_luminosity(self,value):
+        #met a jour la luminosite sur l'IHM
+        self.lumin_value.setText(f"{value}")
+        self.lumin_visu.setStyleSheet(f"color: rgb({value}, {value},{value});") 
+        # et pour le display
+        if value >= 200:
+            self.display_manager.set_brightness(7)
+        elif value > 180:
+            self.display_manager.set_brightness(6)
+        elif value > 120:
+            self.display_manager.set_brightness(5)
+        elif value > 100:
+            self.display_manager.set_brightness(4)
+        elif value > 80:
+            self.display_manager.set_brightness(3)
+        elif value > 50:
+            self.display_manager.set_brightness(2)
+        elif value > 20:
+            self.display_manager.set_brightness(1)
+        else:
+            self.display_manager.set_brightness(0)
+        
+    def update_resolution(self):
+        value = int(self.get_slider_value(self.resolution_slider))
+        config.set("camera", "resolution", value)
         self.camera_manager.update_camera_params()
     
     def update_threshold(self):
-        value = int(self.get_slider_value(self.threshold_slider))
+        value = int(self.get_slider_value(self.threshold_spin))
         config.set("motion", "threshold", value)
         self.camera_manager.motion_threshold = value
     
-    def update_duration(self, value):
-        config.set("motion", "record_duration", value)
-        self.camera_manager.record_duration = value
+    def update_area(self, value):
+        config.set("motion", "min_area", value)
+        self.camera_manager.min_motion_area = value
+
+    def update_blur(self, value):
+        config.set("motion", "blur_size", value)
+        self.camera_manager.blur_size = value
+
+    def update_start_threshold(self, value):
+        config.set("record", "start_threshold", value)
+        self.camera_manager.start_threshold = value
+
+    def update_stop_threshold(self, value):
+        config.set("record", "stop_threshold", value)
+        self.camera_manager.stop_threshold = value
+
+    def update_max_counter(self, value):
+        config.set("record", "max_counter", value)
+        self.camera_manager.max_counter = value
     
     def update_volume(self):
         value = self.get_slider_value(self.volume_slider)
@@ -637,7 +731,8 @@ class GUIManager(QMainWindow):
                 border: 2px solid #00AA00;
             """)
            
-
+    def get_resolution_label(self,resol):
+        return "800*600"
             
     def closeEvent(self, event):
         self.video_thread.stop()

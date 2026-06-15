@@ -1,13 +1,27 @@
 TODO liste RevCam
-- comprendre et regler les parametres de la camera. Voir s'il y a un mode auto
+- OK comprendre et regler les parametres de la camera. 
+- OK voir comment se fait la detection de mvt
+- OK Voir s'il y a un mode auto
 - revoir l'algorithme d'enregistrement
-- Afficher sur l'IHM les frames en mode utiles (raw,bw,motion)
+- faire un test sur la duree au stop recording et effacer si trop court (15s)
+- Faire le menage de ce qui est inutile
+- OK Afficher sur l'IHM les frames en mode utiles (raw,bw,motion, black)
+- OK rajouter les reglages utiles camera (blur, size, duration, min_size)
+- reorganiser les reglages camera (deux colonnes)
+- OK ajouter le compteur de detection sur l'IHM
+- Gerer la luminosite depuis la camera 
+- integrer la lumonosite calculee dans l'IHM, puis la transmettre a l'afficheur
 
-- Ajouter led et btn
-- Ajouter des voyants sur l'IHM correspondant aux LED
-- Ajouter des boutons sur l'IHM correspondant aux BTN
 faire une correspondance entre les LED et l'interface, les boutons et l'interface
 - Faire une liste des messages afficheur
 	- heure avec ou sans colonne
 	- AL
 	- AUd
+Integrer le RTC et definir une strategie d;utilisation
+savoir comment on peut savoir si on est connecte
+	
+	Tests
+	- OK led 
+	- OK btn 
+	- afficheur
+	- RTC

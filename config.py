@@ -7,19 +7,29 @@ class Config:
         self.config_file = config_file
         self.default_config = {
             "camera": {
-                "brightness": 0.5,
-                "contrast": 1.0,
-                "saturation": 1.0,
-                "sharpness": 1.0,
-                "exposure_speed": 30000,
-                "iso": 200
+                #"brightness": 0.5,
+                #"contrast": 1.0,
+                #"saturation": 1.0,
+                #"sharpness": 1.0,
+                #"exposure_speed": 30000,
+                #"iso": 200,
+                "resolution":2,#(480,640)(800,600)
+                "width":800,
+                "height":600
+                
             },
             "motion": {
                 "threshold": 20,
                 "min_area": 50,
-                "blur_size": 10,
-                "record_duration": 5
+                "blur_size": 5
+               # "record_duration": 5
             },
+            "record": {
+                "start_threshold": 10,
+                "max_counter": 500,
+                "stop_threshold": 2
+            },
+                
             "display": {
                 "brightness_tm1637": 5,
                 "auto_off_hours": [23, 6]

@@ -12,7 +12,7 @@ from gpio_controller import GPIOController  # NOUVEAU
 
 class SurveillanceSystem:
     def __init__(self):
-        self.camera_manager = CameraManager(recording_callback=self.on_recording_status)
+        self.camera_manager = CameraManager(recording_callback=self.on_recording_status, motion_callback = self.on_motion_status)
         self.display_manager = DisplayManager()
         self.audio_manager = AudioManager()
         
@@ -35,19 +35,31 @@ class SurveillanceSystem:
         if is_recording:
             #self.display_manager.show_message("REC", 1)
             if self.gui:
-                self.gui.motion_status.setText("🔴🔴 MOUVEMENT DÉTECTÉ 🔴🔴")
-                self.gui.motion_status.setStyleSheet("color: red; font-weight: bold;")
+                self.gui.record_status.setText("🔴🔴 ENREGISTREMENT 🔴🔴")
+                self.gui.record_status.setStyleSheet("color: red; font-weight: bold;")
             # Clignotement LED caméra pendant l'enregistrement
             #if self.gpio_controller:
             #    self.gpio_controller._blink_led(self.gpio_controller.PIN_LED_CAMERA, 0.5)
 
         else:
             if self.gui:
-                self.gui.motion_status.setText("🟢 Aucun mouvement")
-                self.gui.motion_status.setStyleSheet("color: green;")
+                self.gui.record_status.setText("🟢 PAS D ENREGISTREMENT")
+                self.gui.record_status.setStyleSheet("color: green;")
             # Rallumer LED caméra fixe
             #if self.gpio_controller:
             #    self.gpio_controller.set_led_camera(True)
+    def on_motion_status(self, is_moving):
+        if is_moving:
+            #self.display_manager.show_message("REC", 1)
+            if self.gui:
+                self.gui.motion_status.setText("🔴🔴 MOUVEMENT DÉTECTÉ 🔴🔴")
+                self.gui.motion_status.setStyleSheet("color: red; font-weight: bold;")
+
+        else:
+            if self.gui:
+                self.gui.motion_status.setText("🟢 AUCUN MOUVEMENT")
+                self.gui.motion_status.setStyleSheet("color: green;")
+
     def on_led_status(self,led1,led2):
         #
         if self.gui:
