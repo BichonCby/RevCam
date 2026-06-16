@@ -12,7 +12,7 @@ from gpio_controller import GPIOController  # NOUVEAU
 
 class SurveillanceSystem:
     def __init__(self):
-        self.camera_manager = CameraManager(recording_callback=self.on_recording_status, motion_callback = self.on_motion_status, counter_callback = self.on_counter_change)
+        self.camera_manager = CameraManager(recording_callback=self.on_recording_status, motion_callback = self.on_motion_status)
         self.display_manager = DisplayManager()
         self.audio_manager = AudioManager()
         
@@ -60,10 +60,6 @@ class SurveillanceSystem:
                 self.gui.motion_status.setText("🟢 AUCUN MOUVEMENT")
                 self.gui.motion_status.setStyleSheet("color: green;")
 
-    def on_counter_change(self,count):
-        if self.gui:
-            self.gui.motion_counter.setText(f"compteur {count}")
-            
     def on_led_status(self,led1,led2):
         #
         if self.gui:

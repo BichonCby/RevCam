@@ -215,6 +215,7 @@ class VideoThread(QThread):
             
             frame = None
             try:
+                #print(f"mode video = {self.mode} luminosity = {self.camera_manager.luminosity}")
                 if self.mode == "raw":
                     frame = self.camera_manager.current_frame_raw
                 elif self.mode == "bw":
@@ -250,6 +251,8 @@ class GUIManager(QMainWindow):
     BOUTON_SNOOZE = 2
     BOUTON_MODE =3
     
+    counter_update_signal = pyqtSignal(int)
+    
     def __init__(self, camera_manager, display_manager, audio_manager, gpio_controller):
         super().__init__()
         self.camera_manager = camera_manager
@@ -277,6 +280,13 @@ class GUIManager(QMainWindow):
         # etat des Led
         self.led1 = False
         self.led2 = False
+        
+        #gestion de l'affichage du compteur
+        self.counter_update_signal.connect(self.update_counter_display)
+        # Configurez un timer dans l'interface pour demander le compteur
+        self.counter_timer = QTimer()
+        self.counter_timer.timeout.connect(self.request_counter_update)
+        self.counter_timer.start(200)  # Mise à jour toutes les 200 ms
         
     def init_ui(self):
         central_widget = QWidget()
@@ -313,6 +323,23 @@ class GUIManager(QMainWindow):
         mode_layout.addWidget(self.btn_motion)
         mode_layout.addWidget(self.btn_nopic)
         left_layout.addLayout(mode_layout)
+        
+        # Bouton d'activation de la camera
+        cam_ON_layout = QHBoxLayout()
+        self.cam_ON_label = QLabel("Activation camera")
+        self.btn_cam_ON = QPushButton("ON")
+        self.btn_cam_ON.setFixedWidth(100)
+        cam_ON_layout.addWidget(self.cam_ON_label)
+        cam_ON_layout.addWidget(self.btn_cam_ON)
+        self.btn_cam_ON.clicked.connect(self.set_cam_active)
+        if self.camera_manager.camera_is_ON:
+            self.btn_cam_ON.setText("ON ")
+            self.btn_cam_ON.setStyleSheet("QPushButton {background-color: green;color: black;border-radius: 5px;}")
+        else: #On allume
+            self.btn_cam_ON.setText("OFF")
+            self.btn_cam_ON.setStyleSheet("QPushButton {background-color: black;color: white;border-radius: 5px;}")
+        left_layout.addLayout(cam_ON_layout)
+        
         
         # affichage de la luminosite camera
         
@@ -354,17 +381,6 @@ class GUIManager(QMainWindow):
         camera_group = QGroupBox("Paramètres Caméra")
         camera_layout = QFormLayout()
         
-        # self.brightness_slider = self.create_slider(0.0, 1.0, config.get("camera", "brightness"))
-        # self.brightness_slider.valueChanged.connect(self.update_brightness)
-        # camera_layout.addRow("Luminosité:", self.brightness_slider)
-        
-        # self.contrast_slider = self.create_slider(0.0, 2.0, config.get("camera", "contrast"))
-        # self.contrast_slider.valueChanged.connect(self.update_contrast)
-        # camera_layout.addRow("Contraste:", self.contrast_slider)
-        
-        # self.iso_slider = self.create_slider(100, 800, config.get("camera", "iso"))
-        # self.iso_slider.valueChanged.connect(self.update_iso)
-        # camera_layout.addRow("ISO:", self.iso_slider)
         
         self.resolution_slider = self.create_slider(0, 4, config.get("camera", "resolution"))
         self.resolution_slider.valueChanged.connect(self.update_resolution)
@@ -376,14 +392,12 @@ class GUIManager(QMainWindow):
         camera_group.setLayout(camera_layout)
         right_layout.addWidget(camera_group)
         
+        #Section mouvement et enregistrement
+        #detection_groupe = QFormLayout()
         # Section Mouvement
         motion_group = QGroupBox("Détection Mouvement")
         motion_layout = QFormLayout()
         
-        # self.threshold_slider = self.create_slider(10, 100, config.get("motion", "threshold"))
-        # self.threshold_slider.valueChanged.connect(self.update_threshold)
-        # motion_layout.addRow("Sensibilité:", self.threshold_slider)
- 
         self.threshold_spin = QSpinBox()
         self.threshold_spin.setRange(1, 100)
         self.threshold_spin.setValue(config.get("motion", "threshold"))
@@ -408,7 +422,7 @@ class GUIManager(QMainWindow):
         
         motion_group.setLayout(motion_layout)
         right_layout.addWidget(motion_group)
-
+        #right_layout.addWidget(detection_groupe)
         # Section Enregistrement
         record_group = QGroupBox("Enregistrement")
         record_layout = QFormLayout()
@@ -445,24 +459,24 @@ class GUIManager(QMainWindow):
         self.volume_slider.valueChanged.connect(self.update_volume)
         audio_layout.addRow("Volume:", self.volume_slider)
         
-        self.motion_sound_cb = QCheckBox()
-        self.motion_sound_cb.setChecked(config.get("audio", "play_on_motion"))
-        self.motion_sound_cb.stateChanged.connect(self.update_motion_sound)
-        audio_layout.addRow("Son sur mouvement:", self.motion_sound_cb)
+#        self.motion_sound_cb = QCheckBox()
+#        self.motion_sound_cb.setChecked(config.get("audio", "play_on_motion"))
+#        self.motion_sound_cb.stateChanged.connect(self.update_motion_sound)
+#        audio_layout.addRow("Son sur mouvement:", self.motion_sound_cb)
         
         audio_group.setLayout(audio_layout)
         right_layout.addWidget(audio_group)
         
         # Section Affichage TM1637
-        display_group = QGroupBox("Affichage TM1637")
-        display_layout = QFormLayout()
+        #display_group = QGroupBox("Affichage TM1637")
+        #display_layout = QFormLayout()
         
-        self.display_brightness = self.create_slider(0, 7, config.get("display", "brightness_tm1637"))
-        self.display_brightness.valueChanged.connect(self.update_display_brightness)
-        display_layout.addRow("Luminosité:", self.display_brightness)
+        #self.display_brightness = self.create_slider(0, 7, config.get("display", "brightness_tm1637"))
+        #self.display_brightness.valueChanged.connect(self.update_display_brightness)
+        #display_layout.addRow("Luminosité:", self.display_brightness)
         
-        display_group.setLayout(display_layout)
-        right_layout.addWidget(display_group)
+        #display_group.setLayout(display_layout)
+        #right_layout.addWidget(display_group)
         
         # Boutons musique
         music_group = QGroupBox("Musique")
@@ -529,7 +543,20 @@ class GUIManager(QMainWindow):
         
         layout.addWidget(left_panel, 1)
         layout.addWidget(right_panel, 1)
-           
+
+    def request_counter_update(self):
+        """Demande la valeur du compteur au thread CameraManager"""
+        # Utilisez la méthode sécurisée pour lire le compteur depuis un autre thread
+        if hasattr(self.camera_manager, 'get_motion_counter'):
+            counter_value = self.camera_manager.get_motion_counter()
+            self.counter_update_signal.emit(counter_value)
+
+    def update_counter_display(self, value):
+        """Met à jour l'affichage du compteur (exécuté dans le thread GUI)"""
+        # Mettez à jour votre label ici
+        self.motion_counter.setText(f"Compteur: {value}")
+        #pass # Adaptez avec votre code d'affichage
+        
     def update_tm1637_display(self):
         """Met à jour l'affichage simulé depuis le vrai TM1637"""
         try:
@@ -567,6 +594,18 @@ class GUIManager(QMainWindow):
         slider.setTickPosition(QSlider.TicksBelow)
         return slider
     
+    def set_cam_active(self):
+        if self.camera_manager.camera_is_ON:#on eteint
+            self.camera_manager.activate_camera(False)
+            self.btn_cam_ON.setText("OFF")
+            self.btn_cam_ON.setStyleSheet("QPushButton {background-color: black;color: white;border-radius: 5px;}")
+        else: #On allume
+            self.camera_manager.activate_camera(True)
+            self.btn_cam_ON.setText("ON ")
+            self.btn_cam_ON.setStyleSheet("QPushButton {background-color: green;color: black;border-radius: 5px;}")
+        config.set("camera", "active", self.camera_manager.camera_is_ON)
+        print(f"activite camera {self.camera_manager.camera_is_ON}")
+        
     def get_slider_value(self, slider):
         """Récupère la valeur réelle d'un slider"""
         multiplier = self.slider_multipliers.get(slider, 1)
@@ -666,13 +705,13 @@ class GUIManager(QMainWindow):
         self.audio_manager.set_volume(value / 100)
         config.set("audio", "volume", value / 100)
     
-    def update_motion_sound(self, state):
-        config.set("audio", "play_on_motion", state == Qt.Checked)
+#    def update_motion_sound(self, state):
+#        config.set("audio", "play_on_motion", state == Qt.Checked)
     
-    def update_display_brightness(self):
-        value = int(self.get_slider_value(self.display_brightness))
-        config.set("display", "brightness_tm1637", value)
-        self.display_manager.set_brightness(value)
+    #def update_display_brightness(self):
+    #    value = int(self.get_slider_value(self.display_brightness))
+    #    config.set("display", "brightness_tm1637", value)
+    #    self.display_manager.set_brightness(value)
     
     def play_music(self):
         filepath, _ = QFileDialog.getOpenFileName(

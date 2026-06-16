@@ -15,14 +15,15 @@ import os
 from config import config
 
 class CameraManager:
-    def __init__(self, recording_callback=None, motion_callback=None, counter_callback=None):
+    def __init__(self, recording_callback=None, motion_callback=None):
         self.camera = None
         self.running = False
         self.recording = False
         self.encoder = None
         self.recording_filepath = None
         self.camera_lock = threading.Lock()  # Verrou pour les accès caméra
-        self.luminosity = 50.0
+        self.luminosity = 50
+        self.camera_is_ON = config.get("camera", "active")
 #        self.cpt_lum = 0
         
         # Paramètres de détection
@@ -33,6 +34,7 @@ class CameraManager:
         
         # Paramètres du compteur
         self.motion_counter = 0
+        self.counter_lock = threading.Lock() #pour verouiller l'acces
         self.start_threshold = config.get("record", "start_threshold")#10
         self.stop_threshold = config.get("record", "stop_threshold")#2
         self.max_counter = config.get("record", "max_counter")#500
@@ -40,7 +42,6 @@ class CameraManager:
         self.previous_frame = None
         self.recording_callback = recording_callback
         self.motion_callback = motion_callback
-        self.counter_callback = counter_callback
         
         self.current_frame_raw = None
         self.current_frame_bw = None
@@ -147,6 +148,14 @@ class CameraManager:
             # self.cpt_lum = 0
         # self.cpt_lum = self.cpt_lum+1
     
+    def activate_camera(self,actif):
+        self.camera_is_ON = actif
+        if not self.camera_is_ON:
+            self.stop_recording()
+        else:
+            self.full_camera_reset()
+        print("etat camera {actif}")
+        
     def update_camera_params(self):
         """Met à jour les paramètres de la caméra"""
         return # on supprime cette fonctionnalite pour passer en automatique
@@ -202,30 +211,33 @@ class CameraManager:
         self.previous_frame = blur
         motion_detected = is_detected # pour le test de la strategie a l'ancienne
         return motion_detected, motion_mask
-    
+
+    def get_motion_counter(self):
+        """Méthode sécurisée pour lire le compteur depuis un autre thread"""
+        with self.counter_lock:
+            return self.motion_counter
+            
     def update_motion_counter(self, motion_detected):
         """Met à jour le compteur de mouvement"""
         start_needed = False
         stop_needed = False
-        
-        if motion_detected:
-            if self.motion_callback:
-                self.motion_callback(True)
-            self.motion_counter = min(self.motion_counter + 1, self.max_counter)
-            #print(f"🟢 Mouvement +1 → Compteur: {self.motion_counter}")
-            
-            if not self.recording and self.motion_counter >= self.start_threshold:
-                start_needed = True
-        else:
-            if self.motion_callback:
-                self.motion_callback(False)
-            self.motion_counter = max(self.motion_counter - 1, 0)
-            #print(f"⚪ Pas mouvement -1 → Compteur: {self.motion_counter}")
-            
-            if self.recording and self.motion_counter <= self.stop_threshold:
-                stop_needed = True
-        if self.counter_callback:
-            self.counter_callback(self.motion_counter)
+        with self.counter_lock: # <-- Protégez la modification
+            if motion_detected:
+                if self.motion_callback:
+                    self.motion_callback(True)
+                self.motion_counter = min(self.motion_counter + 1, self.max_counter)
+                #print(f"🟢 Mouvement +1 → Compteur: {self.motion_counter}")
+                
+                if not self.recording and self.motion_counter >= self.start_threshold:
+                    start_needed = True
+            else:
+                if self.motion_callback:
+                    self.motion_callback(False)
+                self.motion_counter = max(self.motion_counter - 1, 0)
+                #print(f"⚪ Pas mouvement -1 → Compteur: {self.motion_counter}")
+                
+                if self.recording and self.motion_counter <= self.stop_threshold:
+                    stop_needed = True
        
         return start_needed, stop_needed
     
@@ -303,6 +315,8 @@ class CameraManager:
     
     def capture_frame(self):
         """Capture une frame - avec gestion d'erreur et tentative de reprise"""
+        if not self.camera_is_ON:
+            return False
         try:
             frame = None
             
@@ -344,28 +358,6 @@ class CameraManager:
                     self.current_frame_motion = cv2.addWeighted(
                         self.current_frame_motion, 0.7, mask_colored, 0.3, 0
                     )
-            
-            # Ajouter le compteur à l'image
-            # if self.current_frame_motion is not None:
-                # cv2.putText(
-                    # self.current_frame_motion, 
-                    # f"Count: {self.motion_counter}", 
-                    # (10, 30), 
-                    # cv2.FONT_HERSHEY_SIMPLEX, 
-                    # 0.7, 
-                    # (0, 255, 0) if not self.recording else (0, 0, 255),
-                    # 2
-                # )
-                # if self.recording:
-                    # cv2.putText(
-                        # self.current_frame_motion, 
-                        # "RECORDING", 
-                        # (10, 60), 
-                        # cv2.FONT_HERSHEY_SIMPLEX, 
-                        # 0.7, 
-                        # (0, 0, 255),
-                        # 2
-                    # )
             
             return motion_detected
             

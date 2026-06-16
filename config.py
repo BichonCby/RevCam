@@ -13,6 +13,7 @@ class Config:
                 #"sharpness": 1.0,
                 #"exposure_speed": 30000,
                 #"iso": 200,
+                "active":True,
                 "resolution":2,#(480,640)(800,600)
                 "width":800,
                 "height":600
@@ -26,8 +27,8 @@ class Config:
             },
             "record": {
                 "start_threshold": 10,
-                "max_counter": 500,
-                "stop_threshold": 2
+                "max_counter": 100,
+                "stop_threshold": 6
             },
                 
             "display": {

@@ -5,14 +5,14 @@ TODO liste RevCam
 - OK revoir l'algorithme d'enregistrement
 - OK faire un test sur la duree au stop recording et effacer si trop court (15s)
 - Faire le menage de ce qui est inutile
-- Ajouter le compteur d'enregistrement dans l'IHM
-- creer un bouton ON/OFF camera
+- OK Ajouter le compteur d'enregistrement dans l'IHM
+- OK creer un bouton ON/OFF camera qui conserve la valeur en config
 - OK Afficher sur l'IHM les frames en mode utiles (raw,bw,motion, black)
 - OK rajouter les reglages utiles camera (blur, size, duration, min_size)
 - reorganiser les reglages camera (deux colonnes)
 - OK ajouter le compteur de detection sur l'IHM
 - OK Gerer la luminosite depuis la camera 
-- integrer la lumonosite calculee dans l'IHM, puis la transmettre a l'afficheur
+- integrer la luminosite calculee dans l'IHM, puis la transmettre a l'afficheur
 - faire un service pour demarrer automatiquement
 
 faire une correspondance entre les LED et l'interface, les boutons et l'interface
