@@ -253,12 +253,13 @@ class GUIManager(QMainWindow):
     
     counter_update_signal = pyqtSignal(int)
     
-    def __init__(self, camera_manager, display_manager, audio_manager, gpio_controller):
+    def __init__(self, camera_manager, display_manager, audio_manager, gpio_controller, playlist_manager):
         super().__init__()
         self.camera_manager = camera_manager
         self.display_manager = display_manager
         self.audio_manager = audio_manager
         self.gpio_controller = gpio_controller
+        self.playlist_manager = playlist_manager
         
         self.setWindowTitle("Système de Surveillance - Raspberry Pi")
         self.setGeometry(100, 100, 1200, 800)
@@ -393,7 +394,7 @@ class GUIManager(QMainWindow):
         right_layout.addWidget(camera_group)
         
         #Section mouvement et enregistrement
-        #detection_groupe = QFormLayout()
+        motion_record_layout = QHBoxLayout()
         # Section Mouvement
         motion_group = QGroupBox("Détection Mouvement")
         motion_layout = QFormLayout()
@@ -421,8 +422,8 @@ class GUIManager(QMainWindow):
         motion_layout.addRow("Taille de flou:", self.blur_spin)
         
         motion_group.setLayout(motion_layout)
-        right_layout.addWidget(motion_group)
-        #right_layout.addWidget(detection_groupe)
+        motion_record_layout.addWidget(motion_group)
+
         # Section Enregistrement
         record_group = QGroupBox("Enregistrement")
         record_layout = QFormLayout()
@@ -449,8 +450,8 @@ class GUIManager(QMainWindow):
         record_layout.addRow("Max compteur:", self.max_counter_spin)
         
         record_group.setLayout(record_layout)
-        right_layout.addWidget(record_group)
-        
+        motion_record_layout.addWidget(record_group)
+        right_layout.addLayout(motion_record_layout)
         # Section Audio
         audio_group = QGroupBox("Audio")
         audio_layout = QFormLayout()
@@ -484,12 +485,22 @@ class GUIManager(QMainWindow):
         
         self.btn_play = QPushButton("▶ Jouer")
         self.btn_stop = QPushButton("⏹ Arrêter")
-        
+        self.btn_playlist = QPushButton("▶ Playlist")
+        self.btn_stop_playlist = QPushButton("⏹ Stop")
+        self.btn_next = QPushButton("⏭ Suivant")
+
         self.btn_play.clicked.connect(self.play_music)
         self.btn_stop.clicked.connect(self.stop_music)
+        self.btn_playlist.clicked.connect(self.play_playlist)
+        self.btn_stop_playlist.clicked.connect(self.stop_playlist)
+        self.btn_next.clicked.connect(self.next_song)
         
         music_layout.addWidget(self.btn_play)
         music_layout.addWidget(self.btn_stop)
+        music_layout.addWidget(self.btn_playlist)
+        music_layout.addWidget(self.btn_stop_playlist)
+        music_layout.addWidget(self.btn_next)
+        
         music_group.setLayout(music_layout)
         right_layout.addWidget(music_group)
         
@@ -739,7 +750,16 @@ class GUIManager(QMainWindow):
     def button_mode(self):
         self.gpio_controller.push_button(self.BOUTON_MODE)
         print("bouton mode")
-    
+
+    def play_playlist(self):
+        self.playlist_manager.start()
+
+    def stop_playlist(self):
+        self.playlist_manager.stop()
+
+    def next_song(self):
+        self.playlist_manager.skip()
+        
     def set_led(self,led1,led2):
         #print(f"led callback appele {led1} {led2}")
         if led1 and not self.led1:

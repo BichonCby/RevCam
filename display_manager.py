@@ -59,7 +59,7 @@ class DisplayManager:
     
     def set_brightness(self, brightness):
         """Règle la luminosité (0-7)"""
-        self.brightness_val = max(0, min(7, brightness))
+        self.brightness_val = max(1, min(7, brightness))
         self.display.brightness(self.brightness_val)
     
     def run(self):

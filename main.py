@@ -7,6 +7,8 @@ from PyQt5.QtWidgets import QApplication
 from camera_manager import CameraManager
 from display_manager import DisplayManager
 from audio_manager import AudioManager
+from playlist_manager import PlaylistManager 
+
 from gui_manager import GUIManager
 from gpio_controller import GPIOController  # NOUVEAU
 
@@ -15,6 +17,7 @@ class SurveillanceSystem:
         self.camera_manager = CameraManager(recording_callback=self.on_recording_status, motion_callback = self.on_motion_status)
         self.display_manager = DisplayManager()
         self.audio_manager = AudioManager()
+        self.playlist_manager = PlaylistManager(self.audio_manager, music_dir="music")
         
         # Initialisation du contrôleur GPIO (après les autres managers)
         self.gpio_controller = GPIOController(
@@ -78,7 +81,7 @@ class SurveillanceSystem:
     
     def start_gui(self):
         self.app = QApplication(sys.argv)
-        self.gui = GUIManager(self.camera_manager, self.display_manager, self.audio_manager, self.gpio_controller)
+        self.gui = GUIManager(self.camera_manager, self.display_manager, self.audio_manager, self.gpio_controller, self.playlist_manager)
         self.gui.show()
         sys.exit(self.app.exec_())
     
