@@ -20,15 +20,15 @@ class GPIOController:
     PIN_LED_PROBLEM = 20
     
     # Modes d'affichage pour le bouton MODE
-    MODE_NORMAL = 0
-    MODE_ALARM_SET = 1
-    MODE_INIT = 2
-    MODE_ALARM_ACTIVE = 3
-    MODE_ALARM_SET_HOUR = 4
-    MODE_ALARM_SET_MINUTE = 5
-    MODE_MUSIC = 6
-    MODE_VOLUME = 7
-    MODE_ALARM_ON_OFF = 8
+    MODE_AFF_NORMAL = 0
+    MODE_AFF_ALARM_SET = 1
+    MODE_AFF_INIT = 2 #?
+    MODE_AFF_ALARM_ACTIVE = 3 #?
+    MODE_AFF_ALARM_SET_HOUR = 4
+    MODE_AFF_ALARM_SET_MINUTE = 5
+    MODE_AFF_MUSIC = 6
+    MODE_AFF_VOLUME = 7
+    MODE_AFF_ALARM_ON_OFF = 8
     
     # constantes pour mettre en corelation l'IHM et le GPIO
     BOUTON_PLUS = 1
@@ -44,7 +44,7 @@ class GPIOController:
         self.led_callback = led_callback
         
         self.running = False
-        self.current_mode = self.MODE_NORMAL
+        self.current_mode = self.MODE_AFF_NORMAL
         self.alarm_hour = config.get("alarm", "hour")
         self.alarm_minute = config.get("alarm", "minute")
         self.alarm_enabled = config.get("alarm", "enabled")
@@ -125,6 +125,7 @@ class GPIOController:
             return True
     
     def push_button(self,btn):
+        """Callback appelé quand un bouton est pressé depuis l'IHM"""
         if btn == self.BOUTON_MOINS:
             self._volume_down()
         elif btn == self.BOUTON_PLUS:
@@ -137,7 +138,7 @@ class GPIOController:
             print("mauvais bouton")
     
     def _on_button_press(self, pin):
-        """Callback appelé quand un bouton est pressé"""
+        """Callback appelé quand un bouton physique est pressé"""
         current_time = time.time()
         
         # Anti-rebond
@@ -157,7 +158,7 @@ class GPIOController:
     
     def _volume_up(self):#BOUTON_PLUS
         match self.current_mode:
-            case self.MODE_NORMAL:
+            case self.MODE_AFF_NORMAL:
                 if self.music_mode:# si la musique est OFF, on ne fait rien
                     
                     """Augmente le volume"""
@@ -177,25 +178,25 @@ class GPIOController:
                         self.display_manager.show_message(f"u{volume_percent}", 1)                    
                     self.cpt_mode = 50
                     print(f"Volume: {int(new_volume * 100)}%")
-            case self.MODE_MUSIC:
+            case self.MODE_AFF_MUSIC:
                 self.music_mode = not self.music_mode
                 txt = "m On" if self.music_mode else "m OF"
                 self.display_manager.set_text(txt)
                 self.display_manager.set_mode(3)#??
                 #self.display_manager.show_message(txt, 1)                    
                 self.cpt_mode = 50
-            case self.MODE_ALARM_ON_OFF:
+            case self.MODE_AFF_ALARM_ON_OFF:
                 self.alarm_enabled = not self.alarm_enabled
                 txt = f"{self.alarm_hour:02d}{self.alarm_minute:02d}" if self.alarm_enabled else "noAl"
                 self.display_manager.set_text(txt)
                 self.display_manager.set_mode(3)#??
                 self.cpt_mode = 50
-            case self.MODE_ALARM_SET_HOUR:
+            case self.MODE_AFF_ALARM_SET_HOUR:
                 self.alarm_hour=self.alarm_hour+1
                 self.display_manager.set_text(f"{self.alarm_hour:02d}  ")
                 self.display_manager.set_mode(3)#??
                 self.cpt_mode = 50                
-            case self.MODE_ALARM_SET_MINUTE:
+            case self.MODE_AFF_ALARM_SET_MINUTE:
                 self.alarm_minute=self.alarm_minute+1
                 self.display_manager.set_text(f"  {self.alarm_minute:02d}")
                 self.display_manager.set_mode(3)#??
@@ -223,7 +224,7 @@ class GPIOController:
         """Action selon le mode"""
         self.music_mode = not self.music_mode
         print(f"music mode : {self.music_mode}")
-        # if self.current_mode == self.MODE_ALARM_SET:
+        # if self.current_mode == self.MODE_AFF_ALARM_SET:
             #Mode réglage alarme : confirmer l'heure
             # self.alarm_enabled = not self.alarm_enabled
             # config.set("alarm", "enabled", self.alarm_enabled)
@@ -236,7 +237,7 @@ class GPIOController:
                 # else:
                     # self.display_manager.show_message("OFF", 1)
             
-            # self.current_mode = self.MODE_NORMAL
+            # self.current_mode = self.MODE_AFF_NORMAL
             
         # else:
             #Mode normal : afficher l'heure de l'alarme
@@ -247,33 +248,33 @@ class GPIOController:
         """Change de mode (normal/réglage alarme)"""
         print ("mode swith")
         match self.current_mode:
-            case self.MODE_NORMAL:
-                self.current_mode = self.MODE_ALARM_ON_OFF
+            case self.MODE_AFF_NORMAL:
+                self.current_mode = self.MODE_AFF_ALARM_ON_OFF
                 txt = f"{self.alarm_hour:02d}{self.alarm_minute:02d}" if self.alarm_enabled else "noAl"
                 self.display_manager.set_text(txt)
                 self.display_manager.set_mode(3)#??
                 self.cpt_mode = 40
-            case self.MODE_ALARM_ON_OFF:
-                self.current_mode = self.MODE_ALARM_SET_HOUR
+            case self.MODE_AFF_ALARM_ON_OFF:
+                self.current_mode = self.MODE_AFF_ALARM_SET_HOUR
                 txt = f"{self.alarm_hour:02d}  "
                 self.display_manager.set_text(txt)
                 self.display_manager.set_mode(3)#??
                 self.cpt_mode = 40
-            case self.MODE_ALARM_SET_HOUR:
-                self.current_mode = self.MODE_ALARM_SET_MINUTE
+            case self.MODE_AFF_ALARM_SET_HOUR:
+                self.current_mode = self.MODE_AFF_ALARM_SET_MINUTE
                 txt = f"  {self.alarm_minute:02d}"
                 self.display_manager.set_text(txt)
                 self.display_manager.set_mode(3)#??
                 self.cpt_mode = 40
-            case self.MODE_ALARM_SET_MINUTE:
-                self.current_mode = self.MODE_NORMAL
+            case self.MODE_AFF_ALARM_SET_MINUTE:
+                self.current_mode = self.MODE_AFF_NORMAL
                 self.cpt_mode = 1
-        # if self.current_mode == self.MODE_NORMAL:
-            # self.current_mode = self.MODE_ALARM_SET
+        # if self.current_mode == self.MODE_AFF_NORMAL:
+            # self.current_mode = self.MODE_AFF_ALARM_SET
             # if self.display_manager:
                 # self.display_manager.show_message("SET", 1)
         # else:
-            # self.current_mode = self.MODE_NORMAL
+            # self.current_mode = self.MODE_AFF_NORMAL
     
     def _blink_led(self, pin, duration=0.2):
         """Fait clignoter une LED"""
@@ -338,7 +339,7 @@ class GPIOController:
         while self.running:
             #gestion du compteur de modes
             if self.cpt_mode == 1:
-                self.current_mode = self.MODE_NORMAL
+                self.current_mode = self.MODE_AFF_NORMAL
                 self.display_manager.set_mode(self.current_mode) #on envoi le mode NORMAL au display apres la tempo
                 print("mode normal")
             self.cpt_mode = max(0,self.cpt_mode-1)

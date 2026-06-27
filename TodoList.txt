@@ -16,6 +16,7 @@ TODO liste RevCam
 - faire un service pour demarrer automatiquement
 - OK creer une ou plusieurs playlists
 - OK enregistrer la derniere musique de la playlist
+- completer l'automate de gestion des bouton, notament avec la playlist
 
 - OK faire une correspondance entre les LED et l'interface, les boutons et l'interface
 - Faire une liste des messages afficheur
@@ -30,3 +31,4 @@ savoir comment on peut savoir si on est connecte
 	- OK btn 
 	- afficheur
 	- RTC
+	- audio et playlist
