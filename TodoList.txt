@@ -17,6 +17,7 @@ TODO liste RevCam
 - OK creer une ou plusieurs playlists
 - OK enregistrer la derniere musique de la playlist
 - completer l'automate de gestion des bouton, notament avec la playlist
+- voir comment faire clignoter un message sur l'afficheur
 
 - OK faire une correspondance entre les LED et l'interface, les boutons et l'interface
 - Faire une liste des messages afficheur

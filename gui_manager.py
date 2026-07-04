@@ -11,6 +11,16 @@ class TM1637DisplayWidget(QWidget):
     """Widget qui simule l'affichage du TM1637"""
     
     # Segments pour les chiffres (7 segments)
+    #  ---0---
+    #  |     |
+    #  5     1
+    #  |     |
+    #  ---7---
+    #  |     |
+    #  4     2
+    #  |     |
+    #  ---3---
+    
     SEGMENT_MAP = {
         '0': [1,1,1,1,1,1,0],
         '1': [0,1,1,0,0,0,0],
@@ -38,8 +48,10 @@ class TM1637DisplayWidget(QWidget):
         '_': [0,0,0,0,0,1,0],
         ' ': [0,0,0,0,0,0,0],
         'o': [0,0,1,1,1,0,1],
+        'O': [1,1,1,1,1,1,0],
         'l': [0,0,0,0,1,1,0],
         'L': [0,0,0,1,1,1,0],
+        'Y': [0,1,1,1,0,1,1],
         'n': [0,0,1,0,1,0,1]
     }
     
@@ -252,6 +264,7 @@ class GUIManager(QMainWindow):
     BOUTON_MODE =3
     
     counter_update_signal = pyqtSignal(int)
+    status_update_signal = pyqtSignal(str, str, str)  # (text, style_sheet)
     
     def __init__(self, camera_manager, display_manager, audio_manager, gpio_controller, playlist_manager):
         super().__init__()
@@ -281,6 +294,12 @@ class GUIManager(QMainWindow):
         # etat des Led
         self.led1 = False
         self.led2 = False
+
+        # les boutons ont les memes numero que sur le GPIO
+        self.pin_btn_volume_up = config.get("GPIO", "PIN_BTN_VOLUME_UP")
+        self.pin_btn_volume_down = config.get("GPIO", "PIN_BTN_VOLUME_DOWN")
+        self.pin_btn_alarm_set = config.get("GPIO", "PIN_BTN_ALARM_SET")
+        self.pin_btn_mode = config.get("GPIO", "PIN_BTN_MODE")
         
         #gestion de l'affichage du compteur
         self.counter_update_signal.connect(self.update_counter_display)
@@ -288,6 +307,8 @@ class GUIManager(QMainWindow):
         self.counter_timer = QTimer()
         self.counter_timer.timeout.connect(self.request_counter_update)
         self.counter_timer.start(200)  # Mise à jour toutes les 200 ms
+        
+        self.status_update_signal.connect(self.update_status)
         
     def init_ui(self):
         central_widget = QWidget()
@@ -544,10 +565,14 @@ class GUIManager(QMainWindow):
         btnled_layout.addWidget(self.greenled_label)
         btnled_layout.addWidget(self.redled_label)
         btnled_group.setLayout(btnled_layout)
-        self.btn_plus.clicked.connect(self.button_plus)
-        self.btn_moins.clicked.connect(self.button_moins)
-        self.btn_snooze.clicked.connect(self.button_snooze)
-        self.btn_mode.clicked.connect(self.button_mode)
+        self.btn_plus.pressed.connect(self.button_plus)
+        self.btn_moins.pressed.connect(self.button_moins)
+        self.btn_snooze.pressed.connect(self.button_snooze)
+        self.btn_mode.pressed.connect(self.button_mode)
+        self.btn_plus.released.connect(self.button_plus_released)
+        self.btn_moins.released.connect(self.button_moins_released)
+        self.btn_snooze.released.connect(self.button_snooze_released)
+        self.btn_mode.released.connect(self.button_mode_released)
         right_layout.addWidget(btnled_group)
         
         right_layout.addStretch()
@@ -555,6 +580,18 @@ class GUIManager(QMainWindow):
         layout.addWidget(left_panel, 1)
         layout.addWidget(right_panel, 1)
 
+    def update_status(self, target, text, style_sheet):
+        """Méthode exécutée dans le thread principal pour mettre à jour le statut."""
+        if target == "record":
+            self.record_status.setText(text)
+            self.record_status.setStyleSheet(style_sheet)
+        
+        elif target == "motion":
+            self.motion_status.setText(text)
+            self.motion_status.setStyleSheet(style_sheet)
+        else:
+            print(f"Error guimanager update status uncorrect target {target}")
+        
     def request_counter_update(self):
         """Demande la valeur du compteur au thread CameraManager"""
         # Utilisez la méthode sécurisée pour lire le compteur depuis un autre thread
@@ -570,6 +607,7 @@ class GUIManager(QMainWindow):
         
     def update_tm1637_display(self):
         """Met à jour l'affichage simulé depuis le vrai TM1637"""
+        #appele toutes les 500ms
         try:
             # Récupérer l'état réel depuis le display_manager
             # Pour cela, vous devez stocker les dernières valeurs dans display_manager
@@ -723,7 +761,7 @@ class GUIManager(QMainWindow):
     #    value = int(self.get_slider_value(self.display_brightness))
     #    config.set("display", "brightness_tm1637", value)
     #    self.display_manager.set_brightness(value)
-    
+
     def play_music(self):
         filepath, _ = QFileDialog.getOpenFileName(
             self, "Choisir un fichier audio", "music/", 
@@ -736,19 +774,35 @@ class GUIManager(QMainWindow):
         self.audio_manager.stop_music()
     
     def button_plus(self):
-        self.gpio_controller.push_button(self.BOUTON_PLUS)
+        self.gpio_controller.push_button(self.pin_btn_volume_up,True)
         print("bouton plus")
  
     def button_moins(self):
-        self.gpio_controller.push_button(self.BOUTON_MOINS)
+        self.gpio_controller.push_button(self.pin_btn_volume_down,True)
         print("bouton moins")
 
     def button_snooze(self):
-        self.gpio_controller.push_button(self.BOUTON_SNOOZE)
+        self.gpio_controller.push_button(self.pin_btn_alarm_set,True)
         print("bouton snooze")
 
     def button_mode(self):
-        self.gpio_controller.push_button(self.BOUTON_MODE)
+        self.gpio_controller.push_button(self.pin_btn_mode,True)
+        print("bouton mode")
+
+    def button_plus_released(self):
+        self.gpio_controller.push_button(self.pin_btn_volume_up,False)
+        print("bouton plus")
+ 
+    def button_moins_released(self):
+        self.gpio_controller.push_button(self.pin_btn_volume_down,False)
+        print("bouton moins")
+
+    def button_snooze_released(self):
+        self.gpio_controller.push_button(self.pin_btn_alarm_set,False)
+        print("bouton snooze")
+
+    def button_mode_released(self):
+        self.gpio_controller.push_button(self.pin_btn_mode,False)
         print("bouton mode")
 
     def play_playlist(self):

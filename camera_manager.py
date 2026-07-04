@@ -131,22 +131,6 @@ class CameraManager:
             self.encoder = H264Encoder(bitrate=10000000, repeat=True)
             print("✅ Caméra réinitialisée")
             
-    # def determine_luminosite(self):
-        # if self.cpt_lum >=9:
-            # try :
-                # with self.camera.capture_request() as request:
-                    #on utilise les meta donnes de la camera pour bypasser le mode auto
-                    # metadata = request.get_metadata()
-                    # exposure_time = metadata.get("ExposureTime", 0) #microsecond
-                    # analogue_gain = metadata.get("AnalogueGain", 0)
-                    #La valeur de luminosité brute
-                    # self.luminosity = int(float(exposure_time) * analogue_gain)
-                    # print(f"exposure time :{exposure_time}, analogue gain : {analogue_gain}, luminosite : {self.luminosity}")
-            # except Exception as e:
-                # print(f"Erreur récupération métadonnées: {e}")
-            
-            # self.cpt_lum = 0
-        # self.cpt_lum = self.cpt_lum+1
     
     def activate_camera(self,actif):
         self.camera_is_ON = actif
@@ -252,7 +236,6 @@ class CameraManager:
             month = datetime.now().month
             day = datetime.now().day
             self.recording_filename = f"recordings/{year}/{month:02d}/{day:02d}/motion_{timestamp}.mp4"
-            #self.recording_filepath = f"recordings/motion_{timestamp}.h264"
             os.makedirs(f"recordings/{year}/{month:02d}/{day:02d}", exist_ok=True)
             
             print(f"🎬 DÉMARRAGE ENREGISTREMENT: {self.recording_filename}")
@@ -371,7 +354,6 @@ class CameraManager:
         while self.running:
             try:
                 self.capture_frame()
-                #self.determine_luminosite()
                 time.sleep(0.1)#0.033 pour 30 frames/s
             except Exception as e:
                 print(f"Erreur dans run: {e}")

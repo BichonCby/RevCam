@@ -28,6 +28,8 @@ class DisplayManager:
         self.mode = mode
         
     def set_text(self,text):
+        if len(text) > 4:
+            text = text[:4]
         self.texte = text
         self.colon = False
         
@@ -37,12 +39,7 @@ class DisplayManager:
         """Affiche un message temporaire"""
         if len(text) > 4:
             text = text[:4]
-        # La bibliothèque gpiod-tm1637 n'a pas de méthode show() directe
-        # On affiche temporairement et on revient à l'heure
-        #self.clear()
         self.display.show(text)
-        #time.sleep(duration)
-        #self.show_time()
     
     def get_display(self):
         return self.texte,self.colon

@@ -24,6 +24,7 @@ class SurveillanceSystem:
             audio_manager=self.audio_manager,
             camera_manager=self.camera_manager,
             display_manager=self.display_manager,
+            playlist_manager=self.playlist_manager,
             led_callback = self.on_led_status
         )
         
@@ -36,32 +37,37 @@ class SurveillanceSystem:
     
     def on_recording_status(self, is_recording):
         if is_recording:
-            #self.display_manager.show_message("REC", 1)
             if self.gui:
-                self.gui.record_status.setText("🔴🔴 ENREGISTREMENT 🔴🔴")
-                self.gui.record_status.setStyleSheet("color: red; font-weight: bold;")
-            # Clignotement LED caméra pendant l'enregistrement
-            #if self.gpio_controller:
-            #    self.gpio_controller._blink_led(self.gpio_controller.PIN_LED_CAMERA, 0.5)
+                self.gui.status_update_signal.emit(
+                    "record",
+                    "🔴🔴 ENREGISTREMENT 🔴🔴",
+                    "color: red; font-weight: bold;"
+                )
 
         else:
             if self.gui:
-                self.gui.record_status.setText("🟢 PAS D ENREGISTREMENT")
-                self.gui.record_status.setStyleSheet("color: green;")
-            # Rallumer LED caméra fixe
-            #if self.gpio_controller:
-            #    self.gpio_controller.set_led_camera(True)
+                self.gui.status_update_signal.emit(
+                    "record",
+                    "🟢 PAS D ENREGISTREMENT",
+                    "color: green;"
+                )
+
     def on_motion_status(self, is_moving):
         if is_moving:
-            #self.display_manager.show_message("REC", 1)
             if self.gui:
-                self.gui.motion_status.setText("🔴🔴 MOUVEMENT DÉTECTÉ 🔴🔴")
-                self.gui.motion_status.setStyleSheet("color: red; font-weight: bold;")
+                self.gui.status_update_signal.emit(
+                    "motion",
+                    "🔴🔴 MOUVEMENT DÉTECTÉ 🔴🔴",
+                    "color: red; font-weight: bold;"
+                )
 
         else:
             if self.gui:
-                self.gui.motion_status.setText("🟢 AUCUN MOUVEMENT")
-                self.gui.motion_status.setStyleSheet("color: green;")
+                self.gui.status_update_signal.emit(
+                    "motion",
+                    "🟢 AUCUN MOUVEMENT",
+                    "color: green;"
+                )
 
     def on_led_status(self,led1,led2):
         #

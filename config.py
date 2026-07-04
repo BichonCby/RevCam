@@ -44,7 +44,16 @@ class Config:
                 "hour": 7,
                 "minute": 0,
                 "enabled": False
+            },
+            "GPIO": {
+                "PIN_BTN_VOLUME_UP":7,
+                "PIN_BTN_VOLUME_DOWN": 1,
+                "PIN_BTN_ALARM_SET": 8,
+                "PIN_BTN_MODE": 25,
+                "PIN_LED_MUSIC" :16,
+                "PIN_LED_PROBLEM": 20
             }
+
         }
         self.load()
     
