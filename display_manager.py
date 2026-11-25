@@ -8,7 +8,7 @@ class DisplayManager:
     def __init__(self, clk_pin=23, dio_pin=24):
         # GPIO 18 pour CLK, GPIO 16 pour DIO
         self.display = tm1637.TM1637("/dev/gpiochip0", clk=clk_pin, dio=dio_pin)
-        self.brightness_val = 5
+        self.brightness_val = 2
         self.display.brightness(self.brightness_val)
         self.running = False
         self.mode = 'init'
@@ -23,11 +23,13 @@ class DisplayManager:
         self.texte = f"{hours:02d}{minutes:02d}"
         self.colon = now.second % 2 == 0
         self.display.numbers(hours, minutes, self.colon)
+        print(f"ecriture heure {hours},{minutes}, {self.colon}")
     
     def set_mode(self,mode):
         self.mode = mode
         
     def set_text(self,text):
+        print(f"ecriture texte {text}")
         if len(text) > 4:
             text = text[:4]
         self.texte = text
@@ -37,9 +39,10 @@ class DisplayManager:
         
     def show_message(self, text, duration=2):
         """Affiche un message temporaire"""
+        print(f"ecriture message {text}")
         if len(text) > 4:
             text = text[:4]
-        self.display.show(text)
+        #self.display.show(text)
     
     def get_display(self):
         return self.texte,self.colon
@@ -77,4 +80,4 @@ class DisplayManager:
     def stop(self):
         """Arrête l'affichage"""
         self.running = False
-        #self.clear()
+        self.clear()

@@ -15,6 +15,8 @@ from gpio_controller import GPIOController  # NOUVEAU
 class SurveillanceSystem:
     def __init__(self):
         self.camera_manager = CameraManager(recording_callback=self.on_recording_status, motion_callback = self.on_motion_status)
+        if not self.camera_manager.camera_available:
+            print("Mode sans camera")
         self.display_manager = DisplayManager()
         self.audio_manager = AudioManager()
         self.playlist_manager = PlaylistManager(self.audio_manager, music_dir="music")
@@ -88,14 +90,35 @@ class SurveillanceSystem:
     def start_gui(self):
         self.app = QApplication(sys.argv)
         self.gui = GUIManager(self.camera_manager, self.display_manager, self.audio_manager, self.gpio_controller, self.playlist_manager)
+        self.app.aboutToQuit.connect(self.stop)
         self.gui.show()
         sys.exit(self.app.exec_())
     
     def stop(self):
-        print("stop surveillance systeme")
+        """Arrête tous les services proprement."""
+        print("🛑 Arrêt du système...") 
+        # 1. Arrêter la playlist en premier (avant la GUI)
+        if hasattr(self, 'playlist_manager'):
+            self.playlist_manager.stop()
+        print("✅ Playlist arrêtée")
+        # 2. Arrêter la caméra
         self.camera_manager.stop()
+        print("✅ Caméra arrêtée")
+    
+        # 3. Arrêter l'afficheur
         self.display_manager.stop()
-        self.gpio_controller.stop()
+        print("✅ Afficheur arrêté")
+        
+        # 4. Arrêter le GPIO
+        if hasattr(self, 'gpio_controller'):
+            self.gpio_controller.stop()
+            print("✅ GPIO arrêté")
+        
+        # 5. Quitter le mixer Pygame proprement
+        if hasattr(self.audio_manager, 'cleanup'):
+            self.audio_manager.cleanup()
+        
+        print("✅ Système arrêté proprement")
         
 def main():
     system = SurveillanceSystem()

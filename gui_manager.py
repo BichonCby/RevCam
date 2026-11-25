@@ -261,7 +261,8 @@ class GUIManager(QMainWindow):
     BOUTON_PLUS = 1
     BOUTON_MOINS = 0
     BOUTON_SNOOZE = 2
-    BOUTON_MODE =3
+    BOUTON_MODE = 3
+    BOUTON_LOVE = 4
     
     counter_update_signal = pyqtSignal(int)
     status_update_signal = pyqtSignal(str, str, str)  # (text, style_sheet)
@@ -300,6 +301,7 @@ class GUIManager(QMainWindow):
         self.pin_btn_volume_down = config.get("GPIO", "PIN_BTN_VOLUME_DOWN")
         self.pin_btn_alarm_set = config.get("GPIO", "PIN_BTN_ALARM_SET")
         self.pin_btn_mode = config.get("GPIO", "PIN_BTN_MODE")
+        self.pin_btn_love = config.get("GPIO", "PIN_BTN_LOVE")
         
         #gestion de l'affichage du compteur
         self.counter_update_signal.connect(self.update_counter_display)
@@ -544,6 +546,7 @@ class GUIManager(QMainWindow):
         self.btn_moins = QPushButton("MOINS")
         self.btn_snooze = QPushButton("snooze")
         self.btn_mode = QPushButton("mode")
+        self.btn_love = QPushButton("❤️")
         self.greenled_label = QLabel()
         self.redled_label = QLabel()
         self.greenled_label.setFixedSize(20, 20)
@@ -562,6 +565,7 @@ class GUIManager(QMainWindow):
         btnled_layout.addWidget(self.btn_moins)
         btnled_layout.addWidget(self.btn_snooze)
         btnled_layout.addWidget(self.btn_mode)
+        btnled_layout.addWidget(self.btn_love)
         btnled_layout.addWidget(self.greenled_label)
         btnled_layout.addWidget(self.redled_label)
         btnled_group.setLayout(btnled_layout)
@@ -569,10 +573,12 @@ class GUIManager(QMainWindow):
         self.btn_moins.pressed.connect(self.button_moins)
         self.btn_snooze.pressed.connect(self.button_snooze)
         self.btn_mode.pressed.connect(self.button_mode)
+        self.btn_love.pressed.connect(self.button_love)
         self.btn_plus.released.connect(self.button_plus_released)
         self.btn_moins.released.connect(self.button_moins_released)
         self.btn_snooze.released.connect(self.button_snooze_released)
         self.btn_mode.released.connect(self.button_mode_released)
+        self.btn_love.released.connect(self.button_love_released)
         right_layout.addWidget(btnled_group)
         
         right_layout.addStretch()
@@ -789,6 +795,10 @@ class GUIManager(QMainWindow):
         self.gpio_controller.push_button(self.pin_btn_mode,True)
         print("bouton mode")
 
+    def button_love(self):
+        self.gpio_controller.push_button(self.pin_btn_love,True)
+        print("bouton love appui")
+
     def button_plus_released(self):
         self.gpio_controller.push_button(self.pin_btn_volume_up,False)
         print("bouton plus")
@@ -804,6 +814,10 @@ class GUIManager(QMainWindow):
     def button_mode_released(self):
         self.gpio_controller.push_button(self.pin_btn_mode,False)
         print("bouton mode")
+
+    def button_love_released(self):
+        self.gpio_controller.push_button(self.pin_btn_love,False)
+        print("bouton love relache")
 
     def play_playlist(self):
         self.playlist_manager.start()
@@ -850,5 +864,14 @@ class GUIManager(QMainWindow):
         return "800*600"
             
     def closeEvent(self, event):
+        """Surcharge pour un arrêt propre."""
+        print("🪟 Fermeture de l'interface...")
+        
+        # Arrêter le thread vidéo
         self.video_thread.stop()
+        print("✅ Thread vidéo arrêté")
+        
+        # Arrêter le timer de la playlist (si présent)
+        if hasattr(self, 'playlist_timer'):
+            self.playlist_timer.stop()
         event.accept()

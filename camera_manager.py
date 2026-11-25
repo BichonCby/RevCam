@@ -26,13 +26,13 @@ class CameraManager:
         self.camera_is_ON = config.get("camera", "active")
 #        self.cpt_lum = 0
         
-        # Paramètres de détection
+        # Parametres de détection
         self.motion_threshold = config.get("motion", "threshold")
         self.min_motion_area = config.get("motion", "min_area")
         self.blur_size = config.get("motion", "blur_size")
         
         
-        # Paramètres du compteur
+        # Parametres du compteur
         self.motion_counter = 0
         self.counter_lock = threading.Lock() #pour verouiller l'acces
         self.start_threshold = config.get("record", "start_threshold")#10
@@ -42,6 +42,7 @@ class CameraManager:
         self.previous_frame = None
         self.recording_callback = recording_callback
         self.motion_callback = motion_callback
+        self.camera_available = False
         
         self.current_frame_raw = None
         self.current_frame_bw = None
@@ -49,45 +50,65 @@ class CameraManager:
         self.current_frame_detection = None
         
         self.init_camera()
-    
+
     def init_camera(self):
-        """Initialise la caméra"""
+        """Initialise la camera si elle est presente"""
         with self.camera_lock:
+            # Nettoyage eventuel d'une instance precedente
+            
             if self.camera is not None:
                 try:
                     self.camera.stop()
                     self.camera.close()
-                except:
+                except Exception:
                     pass
-            
-            self.camera = Picamera2()
-            
-            camera_config = self.camera.create_video_configuration(
-                main={"format": "RGB888", "size": (800,600)},
-                raw={"size": (3280, 2464)},  # Force le mode plein capteur (2x2 binning)
-                controls={
-                    "AeEnable": True,
-                    "AwbEnable": True,
-                    "AeExposureMode": controls.AeExposureModeEnum.Normal,  # Changera selon lumière
-                    "AeMeteringMode": controls.AeMeteringModeEnum.Matrix,   # Mesure globale
-                    "FrameDurationLimits": (100000, 100000)  # 10 fps
-                    # "Brightness": config.get("camera", "brightness"),
-                    # "Contrast": config.get("camera", "contrast"),
-                    # "Saturation": config.get("camera", "saturation"),
-                    # "Sharpness": config.get("camera", "sharpness"),
-                    # "ExposureTime": config.get("camera", "exposure_speed"),
-                    # "AnalogueGain": config.get("camera", "iso") / 100
-                }
-            )
-            self.camera.configure(camera_config)
-            self.camera.start()
-            time.sleep(2)
-            
-            self.encoder = H264Encoder(repeat=True, iperiod=60)
-            self.quality = Quality.LOW
-    
+                self.camera = None
+
+
+            # Verification de presence AVANT d'instancier Picamera2
+            try:
+                if not Picamera2.global_camera_info():
+                    print("Aucune camera, module desactive")
+                    self.camera_available = False
+                    self.camera = None
+                    return
+            except Exception as e:
+                print(f"[CameraManager] Erreur lors du scan camera : {e}")
+                self.camera_available = False
+                self.camera = None
+                return
+
+            try:
+                self.camera = Picamera2()
+                camera_config = self.camera.create_video_configuration(
+                    main={"format": "RGB888", "size": (800, 600)},
+                    raw={"size": (3280, 2464)},
+                    controls={
+                        "AeEnable": True,
+                        "AwbEnable": True,
+                        "AeExposureMode": controls.AeExposureModeEnum.Normal,
+                        "AeMeteringMode": controls.AeMeteringModeEnum.Matrix,
+                        "FrameDurationLimits": (100000, 100000)
+                    }
+                )
+                self.camera.configure(camera_config)
+                self.camera.start()
+                time.sleep(2)
+
+                self.encoder = H264Encoder(repeat=True, iperiod=60)
+                self.quality = Quality.LOW
+                self.camera_available = True
+                print("camera initialisee")
+            except Exception as e:
+                print(f"[CameraManager] Impossible d'initialiser la camera : {e}")
+                self.camera_available = False
+                self.camera = None
+ 
+ 
     def full_camera_reset(self):
         """Réinitialisation complète de la caméra - solution au blocage"""
+        if not self.camera_available:
+            return
         print("🔄 Réinitialisation complète de la caméra...")
         with self.camera_lock:
             try:
@@ -138,7 +159,7 @@ class CameraManager:
             self.stop_recording()
         else:
             self.full_camera_reset()
-        print("etat camera {actif}")
+        print(f"etat camera {actif}")
         
     def update_camera_params(self):
         """Met à jour les paramètres de la caméra"""
@@ -227,6 +248,8 @@ class CameraManager:
     
     def start_recording(self):
         """Démarre l'enregistrement vidéo"""
+        if not self.camera_available or self.camera is None:
+            return
         if self.recording:
             return
         
@@ -298,6 +321,8 @@ class CameraManager:
     
     def capture_frame(self):
         """Capture une frame - avec gestion d'erreur et tentative de reprise"""
+        if not self.camera_available or self.camera is None:
+            return
         if not self.camera_is_ON:
             return False
         try:
@@ -353,13 +378,17 @@ class CameraManager:
         self.running = True
         while self.running:
             try:
+                if not self.camera_available:
+                    time.sleep(1.0)
+                    continue
                 self.capture_frame()
                 time.sleep(0.1)#0.033 pour 30 frames/s
             except Exception as e:
                 print(f"Erreur dans run: {e}")
                 time.sleep(0.5)
-                # Tentative de récupération
-                self.full_camera_reset()
+                if self.camera_available:
+                    # Tentative de récupération
+                    self.full_camera_reset()
     
     def stop(self):
         """Arrête la caméra"""
@@ -370,5 +399,7 @@ class CameraManager:
             try:
                 self.camera.stop()
                 self.camera.close()
-            except:
+            except Exception:
                 pass
+        self.camera = None
+        self.camera_available = False

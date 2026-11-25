@@ -34,7 +34,8 @@ class GPIOController:
     BOUTON_PLUS = 1
     BOUTON_MOINS = 0
     BOUTON_SNOOZE = 2
-    BOUTON_MODE =3
+    BOUTON_MODE = 3
+    BOUTON_LOVE = 4
 
     
     def __init__(self, audio_manager, camera_manager, display_manager=None,playlist_manager=None,led_callback=None):
@@ -48,6 +49,7 @@ class GPIOController:
         self.pin_btn_volume_down = config.get("GPIO", "PIN_BTN_VOLUME_DOWN")
         self.pin_btn_alarm_set = config.get("GPIO", "PIN_BTN_ALARM_SET")
         self.pin_btn_mode = config.get("GPIO", "PIN_BTN_MODE")
+        self.pin_btn_love = config.get("GPIO", "PIN_BTN_LOVE")
         self.pin_led_music = config.get("GPIO", "PIN_LED_MUSIC")
         self.pin_led_problem = config.get("GPIO", "PIN_LED_PROBLEM")
         #etat synthetise des bouton IHM et GPIO
@@ -55,24 +57,28 @@ class GPIOController:
         self.bmoins = False
         self.bsnooze = False
         self.bmode = False
+        self.blove = False
 
         self.pushed_IHM ={
             self.pin_btn_volume_up : False,
             self.pin_btn_volume_down : False,
             self.pin_btn_alarm_set : False,
-            self.pin_btn_mode : False
+            self.pin_btn_mode : False,
+            self.pin_btn_love : False
             }
         self.pushed_cpt ={
             self.pin_btn_volume_up : 0,
             self.pin_btn_volume_down : 0,
             self.pin_btn_alarm_set : 0,
-            self.pin_btn_mode : 0
+            self.pin_btn_mode : 0,
+            self.pin_btn_love : 0
             }
         self.pushed_GPIO ={
             self.pin_btn_volume_up : False,
             self.pin_btn_volume_down : False,
             self.pin_btn_alarm_set : False,
-            self.pin_btn_mode : False
+            self.pin_btn_mode : False,
+            self.pin_btn_love : False
             }
         self.running = False
         self.current_mode = self.MODE_AFF_INIT
@@ -98,6 +104,7 @@ class GPIOController:
         GPIO.setup(self.pin_btn_volume_down, GPIO.IN, pull_up_down=GPIO.PUD_UP)
         GPIO.setup(self.pin_btn_alarm_set, GPIO.IN, pull_up_down=GPIO.PUD_UP)
         GPIO.setup(self.pin_btn_mode, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+        GPIO.setup(self.pin_btn_love, GPIO.IN, pull_up_down=GPIO.PUD_UP)
         
         # Configuration des LEDs (sorties)
         GPIO.setup(self.pin_led_music, GPIO.OUT, initial=GPIO.LOW)
@@ -113,7 +120,8 @@ class GPIOController:
             self.pin_btn_volume_up: 0,
             self.pin_btn_volume_down: 0,
             self.pin_btn_alarm_set: 0,
-            self.pin_btn_mode: 0
+            self.pin_btn_mode: 0,
+            self.pin_btn_love: 0
         }
         self.debounce_time = 0.3  # 300 ms
     
@@ -150,11 +158,20 @@ class GPIOController:
                 self.disk_full = True
                 self.set_led_problem(True)
                 if self.display_manager:
-                    self.display_manager.show_message("LOW", 2)
+                    pass
+                    #self.display_manager.show_message("LOW", 2)
                 return False
             return True
         except:
             return True
+            
+    def write_love(self):
+        timestamp = datetime.now().strftime("%Y %m %d %H:%M:%S")
+        print(f"ecriture de l'instant {timestamp}")
+        love_file = "recordings/lovetime.txt"
+        with open(love_file, "a", encoding="utf-8") as f:
+            f.write(f"{timestamp}\n")
+        self.blove = False
     
     def push_button(self,btn,state):
         """Callback appelé quand un bouton est pressé depuis l'IHM"""
@@ -182,6 +199,8 @@ class GPIOController:
         self.bmoins = self.pushed_GPIO[self.pin_btn_volume_down] or self.pushed_IHM[self.pin_btn_volume_down]
         self.bsnooze = self.pushed_GPIO[self.pin_btn_alarm_set] or self.pushed_IHM[self.pin_btn_alarm_set]
         self.bmode = self.pushed_GPIO[self.pin_btn_mode] or self.pushed_IHM[self.pin_btn_mode]
+        if self.pushed_GPIO[self.pin_btn_love] or self.pushed_IHM[self.pin_btn_love]:
+            self.blove = True #trigger reinitialise apres l'ecriture
     
     def _blink_led(self, pin, duration=0.2):
         """Fait clignoter une LED"""
@@ -403,10 +422,13 @@ class GPIOController:
                               callback=self._on_button_event, bouncetime=300)
         GPIO.add_event_detect(self.pin_btn_mode, GPIO.BOTH, 
                               callback=self._on_button_event, bouncetime=300)
+        GPIO.add_event_detect(self.pin_btn_love, GPIO.BOTH, 
+                              callback=self._on_button_event, bouncetime=300)
         
         # Boucle pour les vérifications périodiques
         last_alarm_check = 0
         last_disk_check = 0
+        last_write_love = 0
         
         while self.running:
             #on fait une boucle de 10ms pour quand un des boutons a ete appuye
@@ -424,6 +446,12 @@ class GPIOController:
                 if current_time - last_alarm_check >= 1:
                     self.check_alarm()
                     last_alarm_check = current_time
+                    
+                # Check de l'ecriture de l'instant toutes les x secondes
+                if current_time - last_write_love >= 10:
+                    if self.blove:
+                        self.write_love()
+                    last_write_love = current_time
                 
                 # Vérifier l'espace disque toutes les 30 secondes
                 if current_time - last_disk_check >= 30:
@@ -440,4 +468,5 @@ class GPIOController:
         self.running = False
         GPIO.cleanup([self.pin_btn_mode, self.pin_btn_alarm_set,
                       self.pin_btn_volume_down, self.pin_btn_volume_up,
+                      self.pin_btn_love,
                       self.PIN_LED_MUSIC, self.PIN_LED_PROBLEM])

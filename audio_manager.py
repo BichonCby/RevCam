@@ -67,3 +67,13 @@ class AudioManager:
         pygame.mixer.init()
         self.set_volume(self.volume)
         print("Mixer audio réinitialisé")
+        
+    def cleanup(self):
+        """Nettoie le mixer proprement."""
+        if self.is_playing:
+            self.stop_music()
+        try:
+            pygame.mixer.quit()
+            print("🎵 Mixer audio fermé")
+        except Exception as e:
+            print(f"Erreur lors du cleanup audio: {e}")
