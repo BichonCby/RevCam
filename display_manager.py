@@ -6,10 +6,12 @@ import tm1637
 
 class DisplayManager:
     def __init__(self, clk_pin=23, dio_pin=24):
+        self.display_lock = threading.Lock() # thread pour eviter les conflits d'acces au GPIO
         # GPIO 18 pour CLK, GPIO 16 pour DIO
         self.display = tm1637.TM1637("/dev/gpiochip0", clk=clk_pin, dio=dio_pin)
         self.brightness_val = 2
-        self.display.brightness(self.brightness_val)
+        with self.display_lock:
+            self.display.brightness(self.brightness_val)
         self.running = False
         self.mode = 'init'
         self.texte = "8888"
@@ -22,7 +24,8 @@ class DisplayManager:
         minutes = now.minute
         self.texte = f"{hours:02d}{minutes:02d}"
         self.colon = now.second % 2 == 0
-        self.display.numbers(hours, minutes, self.colon)
+        with self.display_lock:
+            self.display.numbers(hours, minutes, self.colon)
         print(f"ecriture heure {hours},{minutes}, {self.colon}")
     
     def set_mode(self,mode):
@@ -42,7 +45,7 @@ class DisplayManager:
         print(f"ecriture message {text}")
         if len(text) > 4:
             text = text[:4]
-        #self.display.show(text)
+        self.display.show(text)
     
     def get_display(self):
         return self.texte,self.colon
@@ -59,8 +62,12 @@ class DisplayManager:
     
     def set_brightness(self, brightness):
         """Règle la luminosité (0-7)"""
-        self.brightness_val = max(1, min(7, brightness))
-        self.display.brightness(self.brightness_val)
+        brightness_sat = max(1, min(7, brightness))
+        with self.display_lock:
+            if brightness == self.brightness_val:
+                return
+            self.brightness_val = max(1, min(7, brightness_sat))
+            self.display.brightness(self.brightness_val)
     
     def run(self):
         """Boucle principale d'affichage"""
@@ -80,4 +87,4 @@ class DisplayManager:
     def stop(self):
         """Arrête l'affichage"""
         self.running = False
-        self.clear()
+        self.set_text("----")
