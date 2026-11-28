@@ -52,8 +52,8 @@ class Config:
                 "PIN_BTN_ALARM_SET": 8,
                 "PIN_BTN_MODE": 25,
                 "PIN_BTN_LOVE": 12,
-                "PIN_LED_MUSIC" :16,
-                "PIN_LED_PROBLEM": 20
+                "PIN_LED_GREEN" :16,
+                "PIN_LED_RED": 20
             }
 
         }

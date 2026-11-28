@@ -8,17 +8,7 @@ from config import config
 
 class GPIOController:
     """Gestion des boutons physiques et LEDs"""
-    
-    # # Pins des boutons (à ajuster selon votre câblage)
-    # PIN_BTN_VOLUME_UP = 7
-    # PIN_BTN_VOLUME_DOWN = 1
-    # PIN_BTN_ALARM_SET = 8
-    # PIN_BTN_MODE = 25
-    
-    # # Pins des LEDs
-    # PIN_LED_MUSIC = 16
-    # PIN_LED_PROBLEM = 20
-    
+        
     # Modes d'affichage pour le bouton MODE
     MODE_AFF_NORMAL = 0
     MODE_AFF_ALARM_SET = 1
@@ -50,8 +40,8 @@ class GPIOController:
         self.pin_btn_alarm_set = config.get("GPIO", "PIN_BTN_ALARM_SET")
         self.pin_btn_mode = config.get("GPIO", "PIN_BTN_MODE")
         self.pin_btn_love = config.get("GPIO", "PIN_BTN_LOVE")
-        self.pin_led_music = config.get("GPIO", "PIN_LED_MUSIC")
-        self.pin_led_problem = config.get("GPIO", "PIN_LED_PROBLEM")
+        self.pin_led_green = config.get("GPIO", "PIN_LED_GREEN")
+        self.pin_led_red = config.get("GPIO", "PIN_LED_RED")
         #etat synthetise des bouton IHM et GPIO
         self.bplus = False
         self.bmoins = False
@@ -91,8 +81,10 @@ class GPIOController:
         self.cpt_run = 0
         self.timer_blink = 5
         self.state_blink = False
-        self.led_camera_timer = -1
-        self.led_camera_req = False
+        self.led = {
+            "green" : {"req" : False, "timer":-1, "state" : False, "blink" : False},
+            "red" : {"req" : False, "timer":-1, "state" : False, "blink" : False}
+        }
         # Callbacks pour l'interface graphique
         self.status_callbacks = []
         
@@ -110,13 +102,8 @@ class GPIOController:
         GPIO.setup(self.pin_btn_love, GPIO.IN, pull_up_down=GPIO.PUD_UP)
         
         # Configuration des LEDs (sorties)
-        GPIO.setup(self.pin_led_music, GPIO.OUT, initial=GPIO.LOW)
-        GPIO.setup(self.pin_led_problem, GPIO.OUT, initial=GPIO.LOW)
-        
-        # États initiaux des LEDs
-        self.led_music_state = False
-        self.led_camera_state = True
-        self.led_problem_state = False
+        GPIO.setup(self.pin_led_green, GPIO.OUT, initial=GPIO.LOW)
+        GPIO.setup(self.pin_led_red, GPIO.OUT, initial=GPIO.LOW)
         
         # Variables anti-rebond
         self.last_press = {
@@ -129,44 +116,35 @@ class GPIOController:
         self.debounce_time = 0.3  # 300 ms
     
     def manage_led(self):
-        #print(f"manage req {self.led_camera_req} blink {self.state_blink} state {self.led_camera_state}")
         #Pour l'instant une Led pour la musique ON, une autre pour un probleme disk    
         self.timer_blink = max(0,self.timer_blink - 1)
         if self.timer_blink == 0:
             self.timer_blink = 5 #A mettre en config? TODO
             self.state_blink = not self.state_blink
         # pour chaque LED, on gere un auto-clear et un blink
-        if self.led_camera_timer > 0:
-            self.led_camera_timer -= 1
-        if self.led_camera_timer == 0:
-            self.led_camera_req = False
-        self.led_camera_state = self.led_camera_req and (self.state_blink or not self.led_camera_blink)
-            
+        for i in {"green","red"}:
+            if self.led[i]["timer"] > 0:
+                self.led[i]["timer"] -= 1
+            if self.led[i]["timer"] == 0:
+                self.led[i]["req"] = False
+            self.led[i]["state"] = self.led[i]["req"] and (self.state_blink or not self.led[i]["blink"])
         
-        GPIO.output(self.pin_led_music, GPIO.HIGH if self.led_camera_state else GPIO.LOW)
-        GPIO.output(self.pin_led_problem, GPIO.HIGH if self.disk_full else GPIO.LOW)
+        #GPIO.output(self.pin_led_green, GPIO.HIGH if self.led_camera_state else GPIO.LOW)
+        #GPIO.output(self.pin_led_red, GPIO.HIGH if self.disk_full else GPIO.LOW)
+        GPIO.output(self.pin_led_green, GPIO.HIGH if self.led["green"]["state"] else GPIO.LOW)
+        GPIO.output(self.pin_led_red, GPIO.HIGH if self.led["red"]["state"] else GPIO.LOW)
         if self.led_callback:
-            self.led_callback(self.led_camera_state,self.disk_full)
+            self.led_callback(self.led["green"]["state"],self.led["red"]["state"])
             #print("envoi callback")
         #else:
             #print("PB")
             
-    def set_led_camera(self, state, timer = -1,blink=False):
-        """Allume/éteint la LED caméra"""
-        self.led_camera_req = state
-        self.led_camera_blink = blink
-        self.led_camera_timer = timer
-        print("set led")
-    
-    def set_led_problem(self, state, auto_clear=True):
-        """Allume/éteint la LED problème"""
-        self.led_problem_state = state
-        GPIO.output(self.pin_led_problem, GPIO.HIGH if state else GPIO.LOW)
+    def set_led(self, led_name, req, timer = -1,blink=False):
+        #fonction generique pour activer ou desactiver une led
+        self.led[led_name]["req"] = req
+        self.led[led_name]["timer"] = timer
+        self.led[led_name]["blink"] = blink
         
-        # Éteindre automatiquement après 5 secondes si auto_clear
-        if state and auto_clear:
-            threading.Timer(5.0, lambda: self.set_led_problem(False)).start()
-    
     def check_disk_space(self):
         """Vérifie l'espace disque et allume la LED problème si nécessaire"""
         try:
@@ -175,7 +153,7 @@ class GPIOController:
             free_gb = free_space / (1024**3)
             if free_gb < 0.5:#0.5:  # Moins de 500MB
                 self.disk_full = True
-                self.set_led_problem(True)
+                self.set_led("red",True)
                 if self.display_manager:
                     pass
                     #self.display_manager.show_message("LOW", 2)
@@ -184,6 +162,7 @@ class GPIOController:
         except Exception as e:
             print(f"Erreur : {e}")
             return True            
+            
     def write_love(self):
         timestamp = datetime.now().strftime("%Y %m %d %H:%M:%S")
         print(f"ecriture de l'instant {timestamp}")
@@ -221,15 +200,6 @@ class GPIOController:
         if self.pushed_GPIO[self.pin_btn_love] or self.pushed_IHM[self.pin_btn_love]:
             self.blove = True #trigger reinitialise apres l'ecriture
     
-    def _blink_led(self, pin, duration=0.2):
-        """Fait clignoter une LED"""
-        def blink():
-            GPIO.output(pin, GPIO.HIGH)
-            time.sleep(duration)
-            GPIO.output(pin, GPIO.LOW)
-        
-        threading.Thread(target=blink, daemon=True).start()
-    
     def set_alarm_time(self, hour, minute):
         """Définit l'heure du réveil"""
         self.alarm_hour = max(0, min(23, hour))
@@ -252,7 +222,7 @@ class GPIOController:
     def _trigger_alarm(self):
         """Déclenche l'alarme"""
         print("⏰ ALARME !")
-        self.set_led_camera(True)
+        self.set_led("green",True)
         
         # Jouer un son d'alarme
         alarm_sound = os.path.join("music", "alarm.mp3")
@@ -286,8 +256,10 @@ class GPIOController:
                     self.display_manager.set_text(txt)
                     self.display_manager.set_mode(3)#??
                     self.cpt_mode = 40
-                    self.set_led_camera(True,timer=50,blink=True)#test
-
+                    #self.set_led_camera(True,timer=50,blink=True)#test
+                    self.set_led("green",True,timer=50,blink=True)
+                    self.set_led("red",True,timer=100,blink=False)
+                    
                 if self.music_mode and (self.bplus or self.bmoins):
                     #print("appui sur le bouton plus")
                     self.cpt_mode = 30
@@ -495,4 +467,4 @@ class GPIOController:
         GPIO.cleanup([self.pin_btn_mode, self.pin_btn_alarm_set,
                       self.pin_btn_volume_down, self.pin_btn_volume_up,
                       self.pin_btn_love,
-                      self.pin_led_music, self.pin_led_problem])
+                      self.pin_led_green, self.pin_led_red])

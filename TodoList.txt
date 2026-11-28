@@ -21,6 +21,7 @@ TODO liste RevCam
 - restructurer pour pouvoir lancer le programme sans gui
 	- Trouver une commande qui permettrait de le savoir
 	- gerer la luminosite dans camera_manager (ou pas)
+- ne plus appeler les led par leur fonctionnel mais par couleur
 - OK faire une correspondance entre les LED et l'interface, les boutons et l'interface
 - Faire une liste des messages afficheur
 	- heure avec ou sans colonne
