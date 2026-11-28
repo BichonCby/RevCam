@@ -5,6 +5,7 @@ import os
 class Config:
     def __init__(self, config_file="config.json"):
         self.config_file = config_file
+        self.save_needed = False
         self.default_config = {
             "camera": {
                 #"brightness": 0.5,
@@ -57,17 +58,34 @@ class Config:
 
         }
         self.load()
-    
+        
+    def _merge_config(self, default, saved):
+        for key, value in saved.items():
+            if (
+                key in default
+                and isinstance(default[key], dict)
+                and isinstance(value, dict)
+            ):
+                self._merge_config(default[key], value)
+            else:
+                default[key] = value
+                
     def load(self):
+        self.config = self.default_config
+        
         if os.path.exists(self.config_file):
             with open(self.config_file, 'r') as f:
                 saved_config = json.load(f)
-                self.default_config.update(saved_config)
-        self.config = self.default_config
+#                self.default_config.update(saved_config)
+            self._merge_config(self.config, saved_config)
+#        self.config = self.default_config
     
-    def save(self):
-        with open(self.config_file, 'w') as f:
-            json.dump(self.config, f, indent=4)
+    def save(self): #le compteur dans GPIO va appeler toutes les 30s cette methode
+        if self.save_needed:
+            with open(self.config_file, 'w') as f:
+                json.dump(self.config, f, indent=4)
+            self.save_needed = False
+            print("ecriture de la config")
     
     def get(self, category, key=None):
         if key:
@@ -78,6 +96,7 @@ class Config:
         if category not in self.config:
             self.config[category] = {}
         self.config[category][key] = value
-        self.save()
+        self.save_needed = True
+        #self.save() 
 
 config = Config()

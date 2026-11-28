@@ -26,13 +26,13 @@ class DisplayManager:
         self.colon = now.second % 2 == 0
         with self.display_lock:
             self.display.numbers(hours, minutes, self.colon)
-        print(f"ecriture heure {hours},{minutes}, {self.colon}")
+        #print(f"ecriture heure {hours},{minutes}, {self.colon}")
     
     def set_mode(self,mode):
         self.mode = mode
         
     def set_text(self,text):
-        print(f"ecriture texte {text}")
+        #print(f"ecriture texte {text}")
         if len(text) > 4:
             text = text[:4]
         self.texte = text
@@ -42,7 +42,7 @@ class DisplayManager:
         
     def show_message(self, text, duration=2):
         """Affiche un message temporaire"""
-        print(f"ecriture message {text}")
+        #print(f"ecriture message {text}")
         if len(text) > 4:
             text = text[:4]
         self.display.show(text)
@@ -50,14 +50,14 @@ class DisplayManager:
     def get_display(self):
         return self.texte,self.colon
         
-    def get_current_display(self):
-        """Retourne l'état actuel de l'affichage pour la GUI"""
-        # Cette méthode permet à la GUI de connaître l'état
-        return {
-            'numbers': (self.current_hours, self.current_minutes),
-            'colon': self.current_colon,
-            'brightness': self.brightness_val
-        }
+    # def get_current_display(self):
+        # """Retourne l'état actuel de l'affichage pour la GUI"""
+        # # Cette méthode permet à la GUI de connaître l'état
+        # return {
+            # 'numbers': (self.current_hours, self.current_minutes),
+            # 'colon': self.current_colon,
+            # 'brightness': self.brightness_val
+        # }
         
     
     def set_brightness(self, brightness):
@@ -87,4 +87,4 @@ class DisplayManager:
     def stop(self):
         """Arrête l'affichage"""
         self.running = False
-        self.set_text("----")
+        self.set_text("    ")#---- serait mieux TODO

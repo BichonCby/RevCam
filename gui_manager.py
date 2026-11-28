@@ -223,6 +223,8 @@ class VideoThread(QThread):
         self.mode = mode
     
     def run(self):
+        last_luminosity = None
+        black_frame_prev = False
         while self.running:
             
             frame = None
@@ -246,8 +248,14 @@ class VideoThread(QThread):
                     #frame = self.camera_manager.current_frame_motion
                 
                 if frame is not None:
-                    self.change_pixmap_signal.emit(frame, self.mode)
-                    self.change_luminosity_signal.emit(self.camera_manager.luminosity)
+                    if self.mode != "nopic" or not black_frame_prev:
+                        self.change_pixmap_signal.emit(frame, self.mode)
+                    luminosity = self.camera_manager.luminosity
+                    if luminosity != last_luminosity:
+                        print(f"MAJ lum {luminosity} last {last_luminosity}")
+                        self.change_luminosity_signal.emit(luminosity)
+                        last_luminosity = luminosity
+                black_frame_prev = self.mode == "nopic"
             except Exception as e:
                 print(f"Erreur dans VideoThread: {e}")
             
@@ -368,8 +376,8 @@ class GUIManager(QMainWindow):
         # affichage de la luminosite camera
         
         lumin_layout =QHBoxLayout()
-        self.lumin_label = QLabel("Lumonosite camera :")
-        self.lumin_value = QLabel("50")
+        self.lumin_label = QLabel("Luminosité camera :")
+        self.lumin_value = QLabel("49")
         self.lumin_visu = QLabel("█")
         lumin_layout.addWidget(self.lumin_label)
         lumin_layout.addWidget(self.lumin_value)
@@ -699,12 +707,13 @@ class GUIManager(QMainWindow):
                 Qt.SmoothTransformation
             )
             self.video_label.setPixmap(scaled_pixmap)
-            QApplication.processEvents()
+           # QApplication.processEvents() ChatGPT
         except Exception as e:
             print(f"Erreur affichage: {e}")
             
     def update_luminosity(self,value):
         #met a jour la luminosite sur l'IHM
+        
         self.lumin_value.setText(f"{value}")
         self.lumin_visu.setStyleSheet(f"color: rgb({value}, {value},{value});") 
         # et pour le display

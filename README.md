@@ -39,7 +39,7 @@ sudo apt install -y python3-opencv
 sudo apt install -y python3-pygame
 
 # Installation de la bibliothèque TM1637 compatible gpiod
-pip install tm1637-gpiod
+# pip install tm1637-gpiod
 # verification
 python3 -c "from picamera2 import Picamera2; print('Picamera2 OK')"
 python3 -c "from PyQt5.QtWidgets import QApplication; print('PyQt5 OK')"
@@ -53,4 +53,4 @@ python3 -m venv --system-site-packages venv
 source venv/bin/activate
 
 # pour lancer le programme
-pyhton main.py
+python main.py

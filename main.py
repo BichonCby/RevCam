@@ -107,11 +107,13 @@ class SurveillanceSystem:
     
         # 3. Arrêter l'afficheur
         self.display_manager.stop()
+        self.display_thread.join(timeout=2)
         print("✅ Afficheur arrêté")
         
         # 4. Arrêter le GPIO
         if hasattr(self, 'gpio_controller'):
             self.gpio_controller.stop()
+            self.gpio_thread.join(timeout=2)
             print("✅ GPIO arrêté")
         
         # 5. Quitter le mixer Pygame proprement

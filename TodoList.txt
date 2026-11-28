@@ -18,7 +18,9 @@ TODO liste RevCam
 - OK enregistrer la derniere musique de la playlist
 - completer l'automate de gestion des bouton, notament avec la playlist
 - voir comment faire clignoter un message sur l'afficheur
-
+- restructurer pour pouvoir lancer le programme sans gui
+	- Trouver une commande qui permettrait de le savoir
+	- gerer la luminosite dans camera_manager (ou pas)
 - OK faire une correspondance entre les LED et l'interface, les boutons et l'interface
 - Faire une liste des messages afficheur
 	- heure avec ou sans colonne

@@ -22,7 +22,7 @@ class CameraManager:
         self.encoder = None
         self.recording_filepath = None
         self.camera_lock = threading.Lock()  # Verrou pour les accès caméra
-        self.luminosity = 50
+        self.luminosity = 150
         self.camera_is_ON = config.get("camera", "active")
 #        self.cpt_lum = 0
         
@@ -115,8 +115,9 @@ class CameraManager:
                 if self.recording:
                     try:
                         self.camera.stop_recording()
-                    except:
-                        pass
+                    except Exception as e:
+                        print(f"Erreur : {e}")
+                        #pass
                     self.recording = False
                 
                 self.camera.stop()
